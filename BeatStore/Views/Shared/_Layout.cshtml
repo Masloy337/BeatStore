@@ -1,0 +1,330 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>BeatStore</title>
+
+    <style>
+        body {
+            background: #0b0b0f;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+        }
+
+        .nav {
+            background: #12121a;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #222;
+        }
+
+        .nav-left a {
+            color: #aaa;
+            margin-right: 20px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-name {
+            margin-right: 10px;
+            color: #1db954;
+        }
+
+        button {
+            background: #1db954;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .player {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            max-width: 90%;
+            background: #12121a;
+            padding: 15px;
+            border-radius: 16px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+
+        .controls {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        #progressBar {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        #volumeControl {
+            width: 120px;
+            margin-left: auto;
+        }
+
+        .active-beat {
+            border: 1px solid #1db954 !important;
+            box-shadow: 0 0 20px rgba(29, 185, 84, 0.6);
+            transform: translateY(-6px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="nav">
+        <div class="nav-left">
+            <a href="/">Главная</a>
+            <a href="/Beats">Биты</a>
+            <a href="/Cart">🛒 Корзина</a>
+            <a href="/Profile/MyBeats">🎧 Мои биты</a>
+
+            @if (User.IsInRole("Admin"))
+            {
+                <a href="/Admin/Create">Загрузить</a>
+                <a href="/Admin/List">Админка</a>
+                <a href="/Admin/Stats">Статистика</a>
+            }
+        </div>
+
+        <div class="nav-right">
+            @if (User.Identity.IsAuthenticated)
+            {
+                <span class="user-name">@User.Identity.Name</span>
+
+                <form asp-area="Identity"
+                      asp-page="/Account/Logout"
+                      method="post"
+                      style="display:inline;">
+                    <button type="submit">Выйти</button>
+                </form>
+            }
+            else
+            {
+                <a href="/Identity/Account/Login">Вход</a>
+                <a href="/Identity/Account/Register">Регистрация</a>
+            }
+        </div>
+    </div>
+
+    <div class="container">
+        @RenderBody()
+    </div>
+
+    <div class="player">
+        <div id="nowPlaying">🎧 Ничего не играет</div>
+
+        <input type="range" id="progressBar" value="0" min="0" step="1">
+
+        <audio id="audioPlayer"></audio>
+
+        <div class="controls">
+            <button onclick="prevTrack()">⏮</button>
+
+            <!-- ✅ ЕДИНСТВЕННАЯ КНОПКА -->
+            <button id="mainPlayBtn" onclick="toggleMainPlayer()">▶</button>
+
+            <button onclick="nextTrack()">⏭</button>
+
+            <input type="range" id="volumeControl" min="0" max="1" step="0.01">
+        </div>
+    </div>
+
+    <script>
+        const player = document.getElementById("audioPlayer");
+        const progress = document.getElementById("progressBar");
+        const volumeControl = document.getElementById("volumeControl");
+
+        let queue = [];
+        let currentIndex = -1;
+        let isDragging = false;
+        let lastPlayedId = null;
+
+        // PLAY CLICK
+        document.addEventListener("click", function (e) {
+            const btn = e.target.closest(".play-btn");
+            if (!btn) return;
+
+            const src = btn.dataset.audio;
+            const title = btn.dataset.title || "Unknown track";
+
+            if (!src) return;
+
+            buildQueue();
+
+            let index = queue.findIndex(x => x.src === src);
+
+            if (index !== -1) {
+                playTrack(index);
+            }
+        });
+
+        function buildQueue() {
+            queue = [];
+            document.querySelectorAll("[data-audio]").forEach((el) => {
+                queue.push({
+                    src: el.dataset.audio,
+                    title: el.dataset.title || "Unknown track",
+                    btn: el
+                });
+            });
+        }
+
+        function playTrack(index) {
+
+            if (index < 0 || index >= queue.length) return;
+
+            let track = queue[index];
+
+            if (currentIndex === index && player.src.includes(track.src)) {
+
+                let icon = track.btn.querySelector(".icon");
+                let eq = track.btn.querySelector(".eq");
+
+                if (!player.paused) {
+                    player.pause();
+                    if (icon) icon.style.display = "inline";
+                    if (eq) eq.style.display = "none";
+                } else {
+                    player.play();
+                    if (icon) icon.style.display = "none";
+                    if (eq) eq.style.display = "flex";
+                }
+
+                return;
+            }
+
+            currentIndex = index;
+
+            player.src = track.src;
+            player.play();
+
+            // ✅ СИНХРОНИЗАЦИЯ КНОПКИ
+            document.getElementById("mainPlayBtn").innerText = "⏸";
+
+            if (track.btn.dataset.id && lastPlayedId != track.btn.dataset.id) {
+                fetch('/Beats/AddPlay?id=' + track.btn.dataset.id, {
+                    method: 'POST'
+                });
+                lastPlayedId = track.btn.dataset.id;
+            }
+
+            queue.forEach(q => {
+                let icon = q.btn.querySelector(".icon");
+                let eq = q.btn.querySelector(".eq");
+
+                if (icon) icon.style.display = "inline";
+                if (eq) eq.style.display = "none";
+            });
+
+            let icon = track.btn.querySelector(".icon");
+            let eq = track.btn.querySelector(".eq");
+
+            if (icon) icon.style.display = "none";
+            if (eq) eq.style.display = "flex";
+
+            document.querySelectorAll(".beat-card").forEach(el => {
+                el.classList.remove("active-beat");
+            });
+
+            let card = track.btn.closest(".beat-card");
+            if (card) card.classList.add("active-beat");
+
+            document.getElementById("nowPlaying").innerText = "🎧 " + track.title;
+        }
+
+        function nextTrack() {
+            if (currentIndex + 1 < queue.length) playTrack(currentIndex + 1);
+        }
+
+        function prevTrack() {
+            if (currentIndex - 1 >= 0) playTrack(currentIndex - 1);
+        }
+
+        player.addEventListener("ended", nextTrack);
+
+        // ✅ СИНХРОНИЗАЦИЯ СОСТОЯНИЯ
+        player.addEventListener("play", () => {
+            document.getElementById("mainPlayBtn").innerText = "⏸";
+        });
+
+        player.addEventListener("pause", () => {
+            document.getElementById("mainPlayBtn").innerText = "▶";
+        });
+
+        // ПРОГРЕСС
+        player.addEventListener("timeupdate", () => {
+            if (!player.duration || isNaN(player.duration)) return;
+            if (isDragging) return;
+            progress.value = player.currentTime;
+        });
+
+        player.addEventListener("loadedmetadata", () => {
+            progress.max = player.duration;
+        });
+
+        progress.addEventListener("input", () => {
+            isDragging = true;
+            player.currentTime = progress.value;
+        });
+
+        progress.addEventListener("change", () => {
+            isDragging = false;
+        });
+
+        // ГРОМКОСТЬ
+        const savedVolume = localStorage.getItem("volume");
+
+        if (savedVolume !== null) {
+            player.volume = savedVolume;
+            volumeControl.value = savedVolume;
+        } else {
+            player.volume = 0.5;
+            volumeControl.value = 0.5;
+        }
+
+        volumeControl.addEventListener("input", () => {
+            player.volume = volumeControl.value;
+            localStorage.setItem("volume", volumeControl.value);
+        });
+
+        // TOGGLE
+        function toggleMainPlayer() {
+
+            if (!player.src) return;
+
+            let btn = document.getElementById("mainPlayBtn");
+
+            if (player.paused) {
+                player.play();
+                btn.innerText = "⏸";
+            } else {
+                player.pause();
+                btn.innerText = "▶";
+            }
+        }
+    </script>
+
+</body>
+</html>

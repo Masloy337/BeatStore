@@ -1,0 +1,18 @@
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+
+@if (SignInManager.IsSignedIn(User))
+{
+    <span>@User.Identity.Name</span>
+
+    <form asp-area="Identity" asp-page="/Account/Logout" method="post" style="display:inline;">
+        @Html.AntiForgeryToken()
+        <button type="submit">Выйти</button>
+    </form>
+}
+else
+{
+    <a asp-area="Identity" asp-page="/Account/Login">Вход</a>
+    <a asp-area="Identity" asp-page="/Account/Register">Регистрация</a>
+}

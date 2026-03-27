@@ -1,0 +1,67 @@
+﻿@model BeatStore.Models.AdminStatsViewModel
+
+<h2>📊 Статистика</h2>
+
+<div style="margin-bottom:30px;">
+    <p>💰 Доход: <strong>$@Model.TotalRevenue</strong></p>
+    <p>📦 Продажи: <strong>@Model.TotalSales</strong></p>
+    <p>🔥 Топ бит: <strong>@Model.TopBeatTitle</strong> (@Model.TopBeatSales продаж)</p>
+</div>
+
+<h3>📈 По битам</h3>
+
+<table style="width:100%; border-collapse: collapse;">
+    <thead>
+        <tr>
+            <th style="border-bottom:1px solid #333;">Бит</th>
+            <th style="border-bottom:1px solid #333;">Продажи</th>
+            <th style="border-bottom:1px solid #333;">Доход</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var beat in Model.Beats)
+        {
+            <tr>
+                <td>@beat.Title</td>
+                <td>@beat.SalesCount</td>
+                <td>$@beat.Revenue</td>
+            </tr>
+        }
+    </tbody>
+    <h3 style="margin-top:40px;">📈 Продажи по дням</h3>
+
+    <canvas id="salesChart" height="100"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        const labels = [
+            @foreach (var item in Model.SalesByDay)
+            {
+                    @: "@item.Date.ToString("dd.MM")",
+            }
+        ];
+
+        const data = [
+            @foreach (var item in Model.SalesByDay)
+            {
+                    @: @item.Count,
+            }
+        ];
+
+        const ctx = document.getElementById('salesChart');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Продажи',
+                    data: data,
+                    tension: 0.3
+                }]
+            }
+        });
+    </script>
+</table>

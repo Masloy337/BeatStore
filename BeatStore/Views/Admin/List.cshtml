@@ -1,0 +1,17 @@
+﻿@model List<BeatStore.Models.Beat>
+
+<h2>Админка — Биты</h2>
+
+@foreach (var beat in Model)
+{
+    <div style="margin-bottom:20px; padding:10px; background:#111; color:white;">
+
+        <strong>@beat.Title</strong> - @beat.Bpm BPM - $@beat.Price
+
+        <form asp-action="Delete" method="post" style="margin-top:10px;">
+            <input type="hidden" name="id" value="@beat.Id" />
+            <button type="submit">Удалить</button>
+        </form>
+
+    </div>
+}

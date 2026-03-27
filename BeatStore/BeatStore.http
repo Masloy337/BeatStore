@@ -1,0 +1,6 @@
+@BeatStore_HostAddress = http://localhost:5197
+
+GET {{BeatStore_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

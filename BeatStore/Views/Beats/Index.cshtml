@@ -1,0 +1,389 @@
+﻿@model List<BeatStore.Models.Beat>
+
+@{
+    ViewData["Title"] = "Beats";
+    var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+}
+
+<style>
+    /* твои стили НЕ ТРОГАЛ */
+    .beat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill,minmax(260px,1fr));
+        gap: 25px;
+        margin-bottom: 40px;
+    }
+
+    .beat-card {
+        background: #12121a;
+        border-radius: 16px;
+        padding: 15px;
+    }
+
+    .beat-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .beat-row {
+        display: flex;
+        align-items: center;
+        background: #12121a;
+        padding: 12px;
+        border-radius: 14px;
+        gap: 15px;
+    }
+
+    .beat-info {
+        flex: 1;
+    }
+
+    .beat-title {
+        font-weight: bold;
+    }
+
+    .beat-meta {
+        font-size: 12px;
+        color: #aaa;
+    }
+
+    .image-wrapper {
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+    }
+
+        .image-wrapper img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+
+    .image-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        opacity: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .image-wrapper:hover .image-overlay {
+        opacity: 1;
+    }
+
+    .overlay-play {
+        background: #1db954;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        border: none;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        box-shadow: 0 0 20px rgba(29,185,84,0.6);
+    }
+
+    .eq {
+        display: flex;
+        gap: 3px;
+        align-items: flex-end;
+        height: 20px;
+    }
+
+        .eq span {
+            width: 3px;
+            height: 6px;
+            background: white;
+            animation: eqAnim 1s infinite ease-in-out;
+        }
+
+    @@keyframes eqAnim {
+        0% {
+            height: 5px;
+        }
+
+        50% {
+            height: 18px;
+        }
+
+        100% {
+            height: 5px;
+        }
+    }
+
+    .price-btn {
+        background: #1db954;
+        padding: 6px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    .like-btn {
+        background: none;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+    }
+
+    .list-cover img {
+        width: 70px;
+        height: 70px;
+        object-fit: cover;
+    }
+
+    /* 🔥 НОВОЕ — АККОРДЕОН */
+    .license-card {
+        background: #0f0f15;
+        padding: 12px;
+        border-radius: 10px;
+        margin-top: 10px;
+        cursor: pointer;
+    }
+
+    .license-body {
+        max-height: 0;
+        overflow: hidden;
+        transition: 0.3s;
+        font-size: 13px;
+        color: #aaa;
+        margin-top: 8px;
+        line-height: 1.5;
+    }
+
+    .license-card.active .license-body {
+        max-height: 300px;
+    }
+</style>
+
+<!-- 🔥 TOP BEATS -->
+@if (ViewBag.TopBeats != null)
+{
+    <h2>🔥 Топ биты</h2>
+
+    <div class="beat-grid">
+        @foreach (var beat in ViewBag.TopBeats)
+        {
+            var fileName = System.IO.Path.GetFileName(beat.DemoAudioPath);
+            var demoSrc = "/File/Demo?fileName=" + fileName;
+
+            <div class="beat-card" style="border:1px solid gold;">
+                <div class="image-wrapper">
+                    <img src="@(beat.CoverImagePath ?? "/images/no-image.png")" />
+
+                    <div class="image-overlay">
+                        <button class="overlay-play play-btn"
+                                data-id="@beat.Id"
+                                data-audio="@demoSrc"
+                                data-title="@beat.Title">
+
+                            <span class="icon">▶</span>
+
+                            <div class="eq" style="display:none;">
+                                <span></span><span></span><span></span>
+                            </div>
+
+                        </button>
+                    </div>
+                </div>
+
+                <div class="beat-meta">
+                    prod. @(string.IsNullOrEmpty(beat.ProducerName) ? "unknown" : beat.ProducerName)
+                </div>
+
+                <div class="beat-title">🔥 @beat.Title</div>
+                <div class="beat-meta">▶ @beat.PlayCount • ❤️ @(beat.Likes?.Count ?? 0)</div>
+            </div>
+        }
+    </div>
+}
+
+<h2>🔥 Beats</h2>
+
+<div class="beat-list">
+    @foreach (var beat in Model)
+    {
+        var fileName = System.IO.Path.GetFileName(beat.DemoAudioPath);
+        var demoSrc = "/File/Demo?fileName=" + fileName;
+
+        <div class="beat-row">
+
+            <div class="image-wrapper list-cover">
+                <img src="@(beat.CoverImagePath ?? "/images/no-image.png")" />
+
+                <div class="image-overlay">
+                    <button class="overlay-play play-btn"
+                            data-id="@beat.Id"
+                            data-audio="@demoSrc"
+                            data-title="@beat.Title">
+
+                        <span class="icon">▶</span>
+
+                        <div class="eq" style="display:none;">
+                            <span></span><span></span><span></span>
+                        </div>
+
+                    </button>
+                </div>
+            </div>
+
+            <div class="beat-info">
+                <div class="beat-title">@beat.Title</div>
+
+                <div class="beat-meta">
+                    prod. @(string.IsNullOrEmpty(beat.ProducerName) ? "unknown" : beat.ProducerName)
+                </div>
+
+                <div class="beat-meta">
+                    ▶ @beat.PlayCount • @beat.Bpm BPM • @beat.Genre
+                </div>
+
+                <div>
+                    <button onclick="toggleLike(@beat.Id, this)" class="like-btn">
+                        @(beat.Likes?.Any(l => l.UserId == userId) == true ? "❤️" : "🤍")
+                    </button>
+                    @(beat.Likes?.Count ?? 0)
+                </div>
+            </div>
+
+            @if (beat.IsSold)
+            {
+                <div class="price-btn" style="background:#444;">
+                    🔥 SOLD
+                </div>
+            }
+            else
+            {
+                <div class="price-btn"
+                     onclick="openModal(@beat.Id)">
+                    $@beat.Price
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- 🔥 МОДАЛКА -->
+<div id="licenseModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
+
+    <div style="background:#12121a; padding:20px; border-radius:16px; width:400px; max-width:90%;">
+
+        <h3>Выбор лицензии</h3>
+
+        <div id="modalLicenses"></div>
+
+        <button id="buyBtn" style="display:none; margin-top:10px; width:100%;">Купить</button>
+
+        <button onclick="closeModal()" style="margin-top:10px; width:100%;">Закрыть</button>
+
+    </div>
+</div>
+
+<script>
+    async function toggleLike(beatId, btn) {
+        let res = await fetch('/Like/Toggle?beatId=' + beatId, { method: 'POST' });
+
+        if (res.ok) {
+            let count = btn.nextElementSibling;
+
+            if (btn.innerText === "❤️") {
+                btn.innerText = "🤍";
+                count.innerText--;
+            } else {
+                btn.innerText = "❤️";
+                count.innerText++;
+            }
+        }
+    }
+
+    let currentBeatId = null;
+    let selectedLicense = null;
+
+    function openModal(beatId) {
+
+        currentBeatId = beatId;
+
+        fetch('/Beats/GetLicenses?beatId=' + beatId)
+            .then(res => res.json())
+            .then(data => {
+
+                let container = document.getElementById("modalLicenses");
+                container.innerHTML = "";
+
+                document.getElementById("buyBtn").style.display = "none";
+
+                data.forEach(lic => {
+
+                    let div = document.createElement("div");
+                    div.className = "license-card";
+
+                    div.innerHTML = `
+                        <div style="display:flex; justify-content:space-between;">
+                            <strong>${formatName(lic.name)}</strong>
+                            <span>${lic.name !== "Exclusive" ? "$" + lic.price : "—"}</span>
+                        </div>
+
+                        <div class="license-body">
+                            ${getDesc(lic.name)}
+                        </div>
+                    `;
+
+                    div.onclick = () => {
+
+                        document.querySelectorAll(".license-card").forEach(c => c.classList.remove("active"));
+                        div.classList.add("active");
+
+                        selectedLicense = lic;
+
+                        let btn = document.getElementById("buyBtn");
+                        btn.style.display = "block";
+                        btn.innerText = "Купить за $" + lic.price;
+
+                        btn.onclick = () => {
+                            window.location.href = `/Cart/Add?beatId=${beatId}&licenseId=${lic.id}`;
+                        };
+                    };
+
+                    container.appendChild(div);
+                });
+
+                document.getElementById("licenseModal").style.display = "flex";
+            });
+    }
+
+    function closeModal() {
+        document.getElementById("licenseModal").style.display = "none";
+    }
+
+    function formatName(name) {
+        if (name === "Basic") return "💿 MP3 Лицензия";
+        if (name === "Premium") return "🔥 WAV Лицензия";
+        return "👑 Exclusive";
+    }
+
+    function getDesc(name) {
+
+        if (name === "Basic") return `
+            ✔ До 2500 копий<br>
+            ✔ До 10000 стримов<br>
+            ✔ 1 клип<br>
+            ✔ Неограниченные выступления<br>
+            ✔ Указать продюсера<br>
+            🎧 MP3`;
+
+        if (name === "Premium") return `
+            ✔ До 10000 копий<br>
+            ✔ До 25000 стримов<br>
+            ✔ Радио разрешено<br>
+            ✔ Неограниченные выступления<br>
+            🎧 MP3 + WAV`;
+
+        return `
+            ✔ Полные права<br>
+            ✔ Без ограничений<br>
+            ✔ Удаляется после покупки`;
+    }
+</script>

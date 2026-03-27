@@ -1,0 +1,45 @@
+﻿@{
+    ViewData["Title"] = "Create Beat";
+}
+
+<h2>Upload Beat</h2>
+
+<form asp-controller="Admin" asp-action="Create" method="post" enctype="multipart/form-data">
+   
+    <input type="text" name="Title" placeholder="Title" /><br /><br />
+
+    <input type="text" name="Genre" placeholder="Genre" /><br /><br />
+
+    <input type="number" name="Bpm" placeholder="BPM" /><br /><br />
+
+    <!-- 🔥 ОБЩАЯ ЦЕНА (чтобы контроллер не ломался) -->
+    <input type="number" name="Price" placeholder="Base Price" /><br /><br />
+
+    <h2>Лицензии</h2>
+
+    <input type="number" name="BasicPrice" placeholder="MP3 цена" /><br /><br />
+
+    <input type="number" name="PremiumPrice" placeholder="WAV цена" /><br /><br />
+
+    <input type="number" name="ExclusivePrice" placeholder="Exclusive цена" /><br /><br />
+    <h2>Файлы</h2>
+
+    <label>Demo:</label>
+    <input type="file" name="demoFile" /><br /><br />
+
+    <label>MP3 (для basic):</label>
+    <input type="file" name="mp3File" /><br /><br />
+
+    <label>Full (WAV/MP3):</label>
+    <!-- 🔥 ВАЖНО: только fullFile -->
+    <input type="file" name="fullFile" /><br /><br />
+
+    <label>Image:</label>
+    <input type="file" name="imageFile" /><br /><br />
+
+    <h3>Имя продюсера</h3>
+    <input type="text" name="ProducerName" placeholder="Producer name" /><br /><br />
+
+    <button type="submit">Upload</button>
+
+</form>

@@ -1,0 +1,35 @@
+﻿@model List<BeatStore.Models.Beat>
+
+<h2>🛒 Корзина</h2>
+
+@if (!Model.Any())
+{
+    <p>Корзина пуста</p>
+}
+else
+{
+    <table style="width:100%;">
+        <tr>
+            <th>Бит</th>
+            <th>Цена</th>
+            <th></th>
+        </tr>
+
+        @foreach (var beat in Model)
+        {
+            <tr>
+                <td>@beat.Title</td>
+                <td>$@beat.Price</td>
+                <td>
+                    <a href="/Cart/Remove/@beat.Id">Удалить</a>
+                </td>
+            </tr>
+        }
+    </table>
+
+    <br />
+
+    <form method="post" asp-action="Checkout">
+        <button type="submit">💰 Купить все</button>
+    </form>
+}

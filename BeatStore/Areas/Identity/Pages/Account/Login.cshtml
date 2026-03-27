@@ -1,0 +1,21 @@
+﻿@page
+@model BeatStore.Areas.Identity.Pages.Account.LoginModel
+
+<h2>Вход</h2>
+
+<form method="post">
+    @Html.AntiForgeryToken()
+
+    <div>
+        <input asp-for="Input.Email" />
+    </div>
+
+    <div>
+        <input asp-for="Input.Password" type="password" />
+    </div>
+
+    <button type="submit">Login</button>
+
+    <div asp-validation-summary="All" style="color:red;"></div>
+
+</form>
