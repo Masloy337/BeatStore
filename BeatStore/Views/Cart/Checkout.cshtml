@@ -1,0 +1,171 @@
+﻿@{
+    ViewData["Title"] = "Оформление заказа";
+}
+
+<style>
+    .checkout-container {
+        max-width: 500px;
+        margin: 50px auto;
+        background: #141414;
+        padding: 40px;
+        border-radius: 16px;
+        border: 1px solid #222;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .checkout-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+        .checkout-header h2 {
+            color: #fff;
+            font-weight: 800;
+            margin-bottom: 5px;
+        }
+
+        .checkout-header p {
+            color: #888;
+            font-size: 14px;
+        }
+
+    .total-box {
+        background: #1a1a1a;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+        margin-bottom: 30px;
+        border: 1px dashed #333;
+    }
+
+        .total-box span {
+            display: block;
+            color: #aaa;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .total-box strong {
+            color: #1db954;
+            font-size: 36px;
+            font-weight: 900;
+        }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+        .form-group label {
+            display: block;
+            color: #bbb;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+    .form-control {
+        width: 100%;
+        background: #0a0a0a;
+        border: 1px solid #333;
+        color: #fff;
+        padding: 12px 15px;
+        border-radius: 8px;
+        font-size: 15px;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+        .form-control:focus {
+            border-color: #1db954;
+        }
+
+    .card-row {
+        display: flex;
+        gap: 15px;
+    }
+
+        .card-row .form-group {
+            flex: 1;
+        }
+
+    .pay-btn {
+        width: 100%;
+        background: #1db954;
+        color: #000;
+        border: none;
+        padding: 15px;
+        font-size: 18px;
+        font-weight: 800;
+        border-radius: 30px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-top: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+    }
+
+        .pay-btn:hover {
+            background: #1ed760;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(29, 185, 84, 0.3);
+        }
+
+    .secure-badge {
+        text-align: center;
+        color: #666;
+        font-size: 12px;
+        margin-top: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+    }
+</style>
+
+<div class="checkout-container">
+    <div class="checkout-header">
+        <h2>Оплата заказа</h2>
+        <p>Тестовая симуляция транзакции</p>
+    </div>
+
+    <div class="total-box">
+        <span>Сумма к оплате</span>
+        <strong>$@ViewBag.TotalAmount</strong>
+    </div>
+
+    <form asp-controller="Cart" asp-action="ProcessPayment" method="post">
+
+        <div class="form-group">
+            <label>Имя на карте</label>
+            <input type="text" class="form-control" placeholder="JOHN DOE" value="@User.Identity.Name" required>
+        </div>
+
+        <div class="form-group">
+            <label>Номер карты</label>
+            <input type="text" class="form-control" placeholder="0000 0000 0000 0000" maxlength="19" required>
+        </div>
+
+        <div class="card-row">
+            <div class="form-group">
+                <label>Срок действия</label>
+                <input type="text" class="form-control" placeholder="MM/YY" maxlength="5" required>
+            </div>
+            <div class="form-group">
+                <label>CVC</label>
+                <input type="password" class="form-control" placeholder="123" maxlength="3" required>
+            </div>
+        </div>
+
+        <button type="submit" class="pay-btn">
+            Оплатить $@ViewBag.TotalAmount
+        </button>
+    </form>
+
+    <div class="secure-badge">
+        🔒 Безопасная тестовая оплата (Не вводите реальные данные)
+    </div>
+</div>

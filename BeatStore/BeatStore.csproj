@@ -28,12 +28,10 @@
     <Folder Include="Storage\mp3\" />
     <Folder Include="ViewModels\" />
     <Folder Include="wwwroot\css\" />
+    <Folder Include="wwwroot\fonts\" />
     <Folder Include="wwwroot\js\" />
-    <Folder Include="wwwroot\uploads\audio\" />
     <Folder Include="Interfaces\" />
     <Folder Include="Helpers\" />
-    <Folder Include="wwwroot\uploads\demo\" />
-    <Folder Include="wwwroot\uploads\full\" />
     <Folder Include="wwwroot\uploads\images\" />
   </ItemGroup>
 

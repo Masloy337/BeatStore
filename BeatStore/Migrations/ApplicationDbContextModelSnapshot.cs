@@ -57,6 +57,9 @@ namespace BeatStore.Migrations
                     b.Property<string>("ProducerName")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Tags")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -64,6 +67,29 @@ namespace BeatStore.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Beats");
+                });
+
+            modelBuilder.Entity("BeatStore.Models.Favorite", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BeatId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BeatId");
+
+                    b.ToTable("Favorites");
                 });
 
             modelBuilder.Entity("BeatStore.Models.License", b =>
@@ -365,6 +391,17 @@ namespace BeatStore.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("BeatStore.Models.Favorite", b =>
+                {
+                    b.HasOne("BeatStore.Models.Beat", "Beat")
+                        .WithMany()
+                        .HasForeignKey("BeatId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Beat");
                 });
 
             modelBuilder.Entity("BeatStore.Models.License", b =>

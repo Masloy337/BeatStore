@@ -56,6 +56,7 @@ namespace BeatStore.Controllers
 
             return View(model);
         }
+
         public AdminController(ApplicationDbContext context)
         {
             _context = context;
@@ -63,11 +64,13 @@ namespace BeatStore.Controllers
 
         public IActionResult Create()
         {
-
             return View();
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
+        [DisableRequestSizeLimit] // 🔥 ОТКЛЮЧАЕТ БАЗОВЫЙ ЛИМИТ СЕРВЕРА (30 МБ)
+        [RequestFormLimits(MultipartBodyLengthLimit = 1073741824)] // 🔥 РАЗРЕШАЕТ ФОРМЕ ПРИНИМАТЬ ДО 1 ГИГАБАЙТА
         public async Task<IActionResult> Create(
             string Title,
             string Genre,
@@ -77,15 +80,15 @@ namespace BeatStore.Controllers
             int PremiumPrice,
             int ExclusivePrice,
             decimal Price,
+            string? Tags,
             IFormFile? demoFile,
             IFormFile? fullFile,
             IFormFile? mp3File,
             IFormFile? imageFile)
-
         {
+          
             // 🔥 НОВОЕ: убрали wwwroot для аудио
             var root = Directory.GetCurrentDirectory();
-
             var demoFolder = Path.Combine(root, "Storage/demo");
             var fullFolder = Path.Combine(root, "Storage/full");
 
@@ -161,39 +164,39 @@ namespace BeatStore.Controllers
                 Price = Price,
                 ProducerName = ProducerName,
                 CreatedAt = DateTime.Now,
-                DemoAudioPath = demoPath,   // 🔥 теперь имя файла
-                FullAudioPath = fullPath,   // 🔥 теперь имя файла
-                CoverImagePath = imagePath
-
+                DemoAudioPath = demoPath,
+                FullAudioPath = fullPath,
+                CoverImagePath = imagePath,
+                Mp3AudioPatch = mp3Path,
+                Tags = Tags // 🔥 ПРИВЯЗАЛИ ТЕГИ К БАЗЕ ДАННЫХ
             };
 
             _context.Beats.Add(beat);
             await _context.SaveChangesAsync();
 
             // 🔥 СОЗДАЕМ ЛИЦЕНЗИИ
-            var licenses = new List<License>
-{
-            new License
-            {
-            Name = "Basic",
-            Price = BasicPrice,
-            Description = "MP3 lease (basic license)",
-            BeatId = beat.Id
-            },
-            new License
-            {
-            Name = "Premium",
-            Price = PremiumPrice,
-            Description = "WAV lease (premium license)",
-            BeatId = beat.Id
-            },
-            new License
-            {
-            Name = "Exclusive",
-            Price = ExclusivePrice,
-            Description = "Exclusive rights (beat removed after purchase)",
-            BeatId = beat.Id
-            }
+            var licenses = new List<License>{
+                new License
+                {
+                    Name = "Basic",
+                    Price = BasicPrice,
+                    Description = "MP3 lease (basic license)",
+                    BeatId = beat.Id
+                },
+                new License
+                {
+                    Name = "Premium",
+                    Price = PremiumPrice,
+                    Description = "WAV lease (premium license)",
+                    BeatId = beat.Id
+                },
+                new License
+                {
+                    Name = "Exclusive",
+                    Price = ExclusivePrice,
+                    Description = "Exclusive rights (beat removed after purchase)",
+                    BeatId = beat.Id
+                }
             };
 
             _context.Licenses.AddRange(licenses);
@@ -209,6 +212,7 @@ namespace BeatStore.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult Delete(int id)
         {
             var beat = _context.Beats.Find(id);

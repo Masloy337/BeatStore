@@ -25,5 +25,6 @@ namespace BeatStore.Models
         public int PlayCount { get; set; }
         public string? Mp3AudioPatch { get; set; }
         public string? ProducerName { get; set; }
+        public string? Tags { get;set; }
     }
 }

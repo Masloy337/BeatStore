@@ -1,0 +1,230 @@
+﻿@model BeatStore.Models.Order
+
+@{
+    Layout = null;
+    var beat = Model.Beat;
+    var license = Model.License;
+    var buyer = ViewBag.BuyerName;
+    var date = Model.CreatedAt.ToString("dd MMMM yyyy");
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>License Agreement - @beat.Title</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&display=swap" rel="stylesheet">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body {
+            background-color: #555;
+            display: flex;
+            justify-content: center;
+            padding: 40px;
+            font-family: 'Times New Roman', Times, serif;
+            color: #000;
+        }
+
+        .document-container {
+            background: #fff;
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 20px;
+        }
+
+            .header h1 {
+                margin: 0;
+                font-size: 28px;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+            }
+
+            .header p {
+                margin: 5px 0 0 0;
+                font-size: 14px;
+                color: #555;
+            }
+
+        .section {
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+            .section h3 {
+                font-size: 18px;
+                border-bottom: 1px solid #ccc;
+                padding-bottom: 5px;
+                margin-bottom: 15px;
+            }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .info-value {
+            border-bottom: 1px dashed #000;
+        }
+
+        .terms {
+            font-size: 14px;
+            text-align: justify;
+        }
+
+        .signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 60px;
+        }
+
+        .sign-box {
+            width: 45%;
+            text-align: center;
+        }
+
+        /* 🔥 НАСТРОЙКИ ИДЕАЛЬНОЙ ПОДПИСИ */
+        .signature-text {
+            font-family: 'Caveat', cursive;
+            font-size: 38px;
+            color: #1e3a8a; /* Темно-синий, цвет гелевой ручки */
+            line-height: 1;
+            padding: 0 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transform: rotate(-1deg); /* Очень легкий наклон */
+        }
+
+        .sign-line {
+            border-top: 1px solid #000;
+            margin-top: 5px;
+            padding-top: 5px;
+            font-weight: bold;
+        }
+
+        .download-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #141414;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .btn-pdf {
+            background: #1db954;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+            .btn-pdf:hover {
+                background: #1ed760;
+            }
+    </style>
+</head>
+<body>
+
+    <div class="download-panel" id="downloadPanel">
+        <button class="btn-pdf" onclick="generatePDF()">📥 Сохранить как PDF</button>
+    </div>
+
+    <div class="document-container" id="contract">
+        <div class="header">
+            <h1>BEAT LICENSE AGREEMENT</h1>
+            <p>Official legally binding document</p>
+        </div>
+
+        <div class="section">
+            <div class="info-grid">
+                <div class="info-label">Date of Agreement:</div>
+                <div class="info-value">@date</div>
+
+                <div class="info-label">Producer (Licensor):</div>
+                <div class="info-value">@beat.ProducerName</div>
+
+                <div class="info-label">Artist (Licensee):</div>
+                <div class="info-value">@buyer</div>
+
+                <div class="info-label">Beat Title:</div>
+                <div class="info-value"><strong>@beat.Title</strong> (@beat.Bpm BPM)</div>
+
+                <div class="info-label">License Type:</div>
+                <div class="info-value"><strong>@license.Name License</strong></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>1. Terms and Conditions</h3>
+            <div class="terms">
+                This document serves as an official agreement between <strong>@beat.ProducerName</strong> (hereinafter referred to as the "Licensor") and <strong>@buyer</strong> (hereinafter referred to as the "Licensee").
+                <br><br>
+                Under the <strong>@license.Name</strong> license, the Licensee is granted the non-exclusive right to use the instrumental track "<strong>@beat.Title</strong>" for commercial and non-commercial purposes, subject to the limitations specified in the purchased tier.
+                <br><br>
+                <strong>License Details:</strong><br>
+                @Html.Raw(license.Description.Replace("<br>", "<br>• "))
+                <br><br>
+                All master recordings created using the beat must explicitly credit the Producer as "Produced by @beat.ProducerName". The Licensor retains all original copyright and ownership of the underlying instrumental composition.
+            </div>
+        </div>
+
+        <div class="signatures">
+            <div class="sign-box">
+                <div class="signature-text">@beat.ProducerName</div>
+                <div class="sign-line">Licensor Signature</div>
+            </div>
+            <div class="sign-box">
+                <div class="signature-text">@buyer</div>
+                <div class="sign-line">Licensee Signature</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function generatePDF() {
+            document.getElementById('downloadPanel').style.display = 'none';
+
+            const element = document.getElementById('contract');
+
+            const opt = {
+                margin:       0,
+                filename:     'License_@(beat.Title.Replace(" ", "_")).pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            document.fonts.ready.then(() => {
+                html2pdf().set(opt).from(element).save().then(() => {
+                    document.getElementById('downloadPanel').style.display = 'block';
+                });
+            });
+        }
+    </script>
+</body>
+</html>

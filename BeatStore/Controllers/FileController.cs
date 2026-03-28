@@ -21,7 +21,7 @@ namespace BeatStore.Controllers
             if (string.IsNullOrEmpty(fileName))
                 return NotFound();
 
-            var cleanFileName = Path.GetFileName(fileName); // 🔥 FIX
+            var cleanFileName = Path.GetFileName(fileName); // 🔥 FIX - защита от directory traversal
 
             var path = Path.Combine(
                 Directory.GetCurrentDirectory(),
@@ -44,8 +44,11 @@ namespace BeatStore.Controllers
             if (userId == null)
                 return Unauthorized();
 
-            var order = _context.Orders
-                .FirstOrDefault(o => o.UserId == userId && o.BeatId == beatId);
+            // 🔥 ИСПРАВЛЕНИЕ 1: Берем самую ПОСЛЕДНЮЮ (свежую) покупку пользователя!
+            var order = await _context.Orders
+                .Where(o => o.UserId == userId && o.BeatId == beatId)
+                .OrderByDescending(o => o.CreatedAt) // Сортируем по дате создания
+                .FirstOrDefaultAsync();
 
             if (order == null)
                 return Forbid();
@@ -62,13 +65,18 @@ namespace BeatStore.Controllers
 
             var root = Directory.GetCurrentDirectory();
 
-            // 🔥 BASIC → только MP3
-            if (license.Name == "Basic")
+            // 🔥 ИСПРАВЛЕНИЕ 2: Защита от пробелов в БД (сверяем строго "Basic")
+            if (license.Name != null && license.Name.Trim().Equals("Basic", StringComparison.OrdinalIgnoreCase))
             {
+                // Защита от пустых значений в БД
+                if (string.IsNullOrEmpty(beat.Mp3AudioPatch))
+                    return NotFound("MP3 файл для этого бита не загружен.");
+                // ... дальше твой старый код (PhysicalFile и ZIP)
+
                 var mp3Path = Path.Combine(root, "Storage/mp3", beat.Mp3AudioPatch);
 
                 if (!System.IO.File.Exists(mp3Path))
-                    return NotFound();
+                    return NotFound("Файл не найден на сервере.");
 
                 return PhysicalFile(
                     mp3Path,
@@ -78,42 +86,49 @@ namespace BeatStore.Controllers
                 );
             }
 
-            // 🔥 PREMIUM / EXCLUSIVE → ZIP
-            var wavPath = Path.Combine(root, "Storage/full", beat.FullAudioPath);
-            var mp3PathZip = Path.Combine(root, "Storage/mp3", beat.Mp3AudioPatch);
+            // 🔥 PREMIUM / EXCLUSIVE → ZIP (WAV + MP3)
 
-            if (!System.IO.File.Exists(wavPath))
-                return NotFound();
+            // УБРАЛИ блок using() для MemoryStream! 
+            // ASP.NET сам закроет поток после того, как отдаст файл пользователю.
+            var memory = new MemoryStream();
 
-            // 🔥 создаём ZIP в памяти
-            using (var memory = new MemoryStream())
+            using (var archive = new ZipArchive(memory, ZipArchiveMode.Create, true))
             {
-                using (var archive = new ZipArchive(memory, ZipArchiveMode.Create, true))
+                // WAV (Проверяем, что путь не пустой перед тем, как клеить его)
+                if (!string.IsNullOrEmpty(beat.FullAudioPath))
                 {
-                    // WAV
-                    var wavEntry = archive.CreateEntry(beat.Title + ".wav");
-                    using (var entryStream = wavEntry.Open())
-                    using (var fileStream = new FileStream(wavPath, FileMode.Open))
+                    var wavPath = Path.Combine(root, "Storage/full", beat.FullAudioPath);
+                    if (System.IO.File.Exists(wavPath))
                     {
-                        await fileStream.CopyToAsync(entryStream);
-                    }
-
-                    // MP3 (если есть)
-                    if (!string.IsNullOrEmpty(beat.Mp3AudioPatch) && System.IO.File.Exists(mp3PathZip))
-                    {
-                        var mp3Entry = archive.CreateEntry(beat.Title + ".mp3");
-                        using (var entryStream = mp3Entry.Open())
-                        using (var fileStream = new FileStream(mp3PathZip, FileMode.Open))
+                        var wavEntry = archive.CreateEntry(beat.Title + ".wav", CompressionLevel.Fastest);
+                        using (var entryStream = wavEntry.Open())
+                        using (var fileStream = new FileStream(wavPath, FileMode.Open, FileAccess.Read, FileShare.Read))
                         {
                             await fileStream.CopyToAsync(entryStream);
                         }
                     }
                 }
 
-                memory.Position = 0;
-
-                return File(memory.ToArray(), "application/zip", beat.Title + ".zip");
+                // MP3 (Проверяем, что путь не пустой)
+                if (!string.IsNullOrEmpty(beat.Mp3AudioPatch))
+                {
+                    var mp3PathZip = Path.Combine(root, "Storage/mp3", beat.Mp3AudioPatch);
+                    if (System.IO.File.Exists(mp3PathZip))
+                    {
+                        var mp3Entry = archive.CreateEntry(beat.Title + ".mp3", CompressionLevel.Fastest);
+                        using (var entryStream = mp3Entry.Open())
+                        using (var fileStream = new FileStream(mp3PathZip, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        {
+                            await fileStream.CopyToAsync(entryStream);
+                        }
+                    }
+                }
             }
+
+            memory.Position = 0;
+
+            // Возвращаем сам поток ASP.NET
+            return File(memory, "application/zip", beat.Title + ".zip");
         }
     }
 }

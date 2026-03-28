@@ -15,44 +15,57 @@ namespace BeatStore.Controllers
             _context = context;
         }
 
-        public async Task<IActionResult> Index(string search, int? minBpm, int? maxBpm, string genre)
+        // 🔥 Обновленный метод Index с поиском и фильтрами
+        public async Task<IActionResult> Index(string searchString, string genre)
         {
-            var query = _context.Beats
-                .Include(b => b.Orders)
-                .Include(b => b.Licenses)
+            // 1. Получаем уникальные жанры из базы данных для кнопок-фильтров
+            var genres = await _context.Beats
+                .Where(b => !string.IsNullOrEmpty(b.Genre))
+                .Select(b => b.Genre)
+                .Distinct()
+                .ToListAsync();
+
+            ViewBag.Genres = genres;
+            ViewBag.CurrentGenre = genre;
+            ViewBag.CurrentSearch = searchString;
+
+            // 2. Получаем ТОП-биты (например, 4 самых прослушиваемых)
+            ViewBag.TopBeats = await _context.Beats
+                .Include(b => b.Likes)
+                .OrderByDescending(b => b.PlayCount)
+                .Take(4)
+                .ToListAsync();
+
+            // 3. Базовый запрос для списка ВСЕХ битов
+            var beatsQuery = _context.Beats
                 .Include(b => b.Likes)
                 .AsQueryable();
 
-            // 🔍 фильтры (оставляем твою логику)
-            if (!string.IsNullOrEmpty(search))
-                query = query.Where(b => b.Title.Contains(search));
+            // 🔥 ФИЛЬТР 1: Поиск по названию, продюсеру, ЖАНРУ и ТЕГАМ!
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                beatsQuery = beatsQuery.Where(b =>
+                    b.Title.Contains(searchString) ||
+                    b.ProducerName.Contains(searchString) ||
+                    (b.Genre != null && b.Genre.Contains(searchString)) ||
+                    (b.Tags != null && b.Tags.Contains(searchString))
+                );
+            }
 
-            if (minBpm.HasValue)
-                query = query.Where(b => b.Bpm >= minBpm);
-
-            if (maxBpm.HasValue)
-                query = query.Where(b => b.Bpm <= maxBpm);
-
+            // 🔥 ФИЛЬТР 2: По клику на кнопку жанра
             if (!string.IsNullOrEmpty(genre))
-                query = query.Where(b => b.Genre.Contains(genre));
+            {
+                beatsQuery = beatsQuery.Where(b => b.Genre == genre);
+            }
 
-            var beats = await query
-                .OrderByDescending(x => x.CreatedAt)
-                .ToListAsync();
-
-            // 🔥 ТОП БИТЫ
-            var topBeats = beats
-                .OrderByDescending(b => b.PlayCount + (b.Likes.Count * 3))
-                .Take(4)
-                .ToList();
-
-            ViewBag.TopBeats = topBeats;
-
+            // Выполняем запрос и отправляем отфильтрованные биты на страницу
+            var beats = await beatsQuery.ToListAsync();
             return View(beats);
         }
 
         // 🔥 ОБНОВЛЕННЫЙ BUY (поддержка лицензий)
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Buy(int id, int? licenseId)
         {
             var beat = await _context.Beats

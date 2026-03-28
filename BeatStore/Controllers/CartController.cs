@@ -4,6 +4,7 @@ using BeatStore.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization; // 🔥 Добавили для атрибута [Authorize]
 
 namespace BeatStore.Controllers
 {
@@ -16,54 +17,49 @@ namespace BeatStore.Controllers
             _context = context;
         }
 
-        // 🔥 модель элемента корзины
         public class CartItem
         {
             public int BeatId { get; set; }
             public int LicenseId { get; set; }
         }
 
-        // 📦 получить корзину
         private List<CartItem> GetCart()
         {
             var cartJson = HttpContext.Session.GetString("cart");
-
-            if (string.IsNullOrEmpty(cartJson))
-                return new List<CartItem>();
-
+            if (string.IsNullOrEmpty(cartJson)) return new List<CartItem>();
             return JsonSerializer.Deserialize<List<CartItem>>(cartJson) ?? new List<CartItem>();
         }
 
-        // 💾 сохранить корзину
         private void SaveCart(List<CartItem> cart)
         {
             HttpContext.Session.SetString("cart", JsonSerializer.Serialize(cart));
         }
 
-        // ➕ добавить (🔥 теперь с лицензией)
+        // ➕ Добавить в корзину (AJAX версия)
+        [HttpPost]
         public IActionResult Add(int beatId, int licenseId)
         {
             var cart = GetCart();
 
-            if (!cart.Any(x => x.BeatId == beatId && x.LicenseId == licenseId))
+            var existingItem = cart.FirstOrDefault(x => x.BeatId == beatId);
+            if (existingItem != null)
             {
-                cart.Add(new CartItem
-                {
-                    BeatId = beatId,
-                    LicenseId = licenseId
-                });
+                existingItem.LicenseId = licenseId;
+            }
+            else
+            {
+                cart.Add(new CartItem { BeatId = beatId, LicenseId = licenseId });
             }
 
             SaveCart(cart);
 
-            return RedirectToAction("Index", "Beats");
+            return Json(new { success = true, message = "Бит добавлен в корзину", cartCount = cart.Count });
         }
 
-        // 🧾 страница корзины
+        // 🧾 Страница корзины
         public async Task<IActionResult> Index()
         {
             var cart = GetCart();
-
             var beatIds = cart.Select(x => x.BeatId).ToList();
 
             var beats = await _context.Beats
@@ -71,34 +67,63 @@ namespace BeatStore.Controllers
                 .Where(b => beatIds.Contains(b.Id))
                 .ToListAsync();
 
+            ViewBag.CartItems = cart;
+
             return View(beats);
         }
 
-        // ❌ удалить
-        public IActionResult Remove(int beatId, int licenseId)
+        // ❌ Удалить из корзины
+        public IActionResult Remove(int beatId)
         {
             var cart = GetCart();
-
-            var item = cart.FirstOrDefault(x => x.BeatId == beatId && x.LicenseId == licenseId);
+            var item = cart.FirstOrDefault(x => x.BeatId == beatId);
 
             if (item != null)
+            {
                 cart.Remove(item);
-
-            SaveCart(cart);
+                SaveCart(cart);
+            }
 
             return RedirectToAction("Index");
         }
 
-        // 💰 купить все
-        [HttpPost]
+        // 🔥 1. СТРАНИЦА ОФОРМЛЕНИЯ ЗАКАЗА (GET-запрос)
+        [Authorize]
+        [HttpGet]
         public async Task<IActionResult> Checkout()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (userId == null)
-                return Redirect("/Identity/Account/Login");
-
             var cart = GetCart();
+            if (!cart.Any())
+            {
+                return RedirectToAction("Index"); // Если корзина пуста - кидаем обратно
+            }
+
+            decimal totalAmount = 0;
+
+            // Считаем сумму прямо из базы данных для безопасности
+            foreach (var item in cart)
+            {
+                var license = await _context.Licenses.FindAsync(item.LicenseId);
+                if (license != null)
+                {
+                    totalAmount += license.Price;
+                }
+            }
+
+            ViewBag.TotalAmount = totalAmount;
+            return View(); // Отдаст страницу Checkout.cshtml, которую мы создали
+        }
+
+        // 🔥 2. СИМУЛЯЦИЯ ОПЛАТЫ И ВЫДАЧА БИТОВ (POST-запрос)
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProcessPayment()
+        {
+            var cart = GetCart();
+            if (!cart.Any()) return RedirectToAction("Index");
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             foreach (var item in cart)
             {
@@ -106,45 +131,53 @@ namespace BeatStore.Controllers
                     .Include(b => b.Licenses)
                     .FirstOrDefaultAsync(b => b.Id == item.BeatId);
 
-                if (beat == null)
-                    continue;
+                if (beat == null) continue;
 
                 var license = beat.Licenses?.FirstOrDefault(l => l.Id == item.LicenseId);
+                if (license == null) continue;
 
-                if (license == null)
-                    continue;
+                // Защита: Если бит уже купили эксклюзивно пока мы были в корзине
+                if (beat.IsSold) continue;
 
-                // ❌ уже куплен
-                var alreadyBought = _context.Orders
-                    .Any(o => o.UserId == userId && o.BeatId == beat.Id && o.LicenseId == license.Id);
+                // Защита: Уже куплен этот бит с этой лицензией этим юзером?
+                var alreadyBought = await _context.Orders
+                    .AnyAsync(o => o.UserId == userId && o.BeatId == beat.Id && o.LicenseId == license.Id);
 
-                if (alreadyBought)
-                    continue;
+                if (alreadyBought) continue;
 
+                // Создаем заказ
                 var order = new Order
                 {
                     UserId = userId,
                     BeatId = beat.Id,
-                    LicenseId = license.Id, // 🔥 КЛЮЧЕВОЕ
+                    LicenseId = license.Id,
                     CreatedAt = DateTime.Now
                 };
 
                 _context.Orders.Add(order);
 
-                // 🔥 если exclusive — закрываем бит
+                // Если купили Exclusive — навсегда снимаем бит с продажи
                 if (license.Name == "Exclusive")
                 {
                     beat.IsSold = true;
+                    _context.Beats.Update(beat);
                 }
             }
 
             await _context.SaveChangesAsync();
 
-            SaveCart(new List<CartItem>());
+            // Очищаем сессию корзины после успешной оплаты
+            HttpContext.Session.Remove("cart");
 
-            TempData["Message"] = "Покупка успешна";
+            // Перекидываем на красивую страницу успеха
+            return RedirectToAction("Success");
+        }
 
-            return RedirectToAction("Index", "Beats");
+        // 🔥 3. СТРАНИЦА УСПЕХА
+        [Authorize]
+        public IActionResult Success()
+        {
+            return View();
         }
     }
 }

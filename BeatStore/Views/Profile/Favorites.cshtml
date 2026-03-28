@@ -1,0 +1,328 @@
+﻿@model List<BeatStore.Models.Beat>
+
+@{
+    ViewData["Title"] = "Избранное";
+    var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+}
+
+<style>
+    /* 🔥 КОПИРУЕМ ГЛОБАЛЬНЫЕ СТИЛИ СТРОКИ БИТА ДЛЯ ЕДИНСТВА ДИЗАЙНА */
+    .favorites-container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding-top: 20px;
+    }
+
+    .beat-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        margin-bottom: 50px;
+    }
+
+    /* 🔥 СТРОКА БИТА (как в каталоге) */
+    .beat-row {
+        display: flex;
+        align-items: center;
+        background: #141414;
+        padding: 12px;
+        border-radius: 14px;
+        gap: 20px;
+        border: 1px solid #222;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+        .beat-row:hover {
+            transform: translateX(5px);
+            border-color: #333;
+            background: #1a1a1a;
+        }
+
+    /* Обложка */
+    .list-cover {
+        width: 100px !important;
+        height: 100px !important;
+        flex-shrink: 0;
+        position: relative;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+        .list-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+
+    .beat-row:hover .list-cover img {
+        transform: scale(1.05);
+    }
+
+    /* BPM Бэйдж */
+    .bpm-badge {
+        position: absolute;
+        bottom: 4px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(20, 20, 20, 0.85);
+        color: #fff;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-weight: 700;
+        white-space: nowrap;
+        border: 1px solid rgba(255,255,255,0.1);
+        z-index: 2;
+        pointer-events: none;
+    }
+
+    /* Оверлей плеера */
+    .image-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        opacity: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: opacity 0.3s ease;
+        z-index: 3;
+    }
+
+    .list-cover:hover .image-overlay {
+        opacity: 1;
+    }
+
+    .overlay-play {
+        background: #1db954;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: none;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        color: #000;
+        font-size: 16px;
+        transition: transform 0.2s ease;
+    }
+
+        .overlay-play:hover {
+            transform: scale(1.1);
+            background: #1ed760;
+        }
+
+    /* Информация */
+    .info-wrapper {
+        flex-grow: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .track-title {
+        font-weight: 800;
+        font-size: 20px;
+        color: #fff;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        letter-spacing: 0.5px;
+    }
+
+    .track-producer {
+        font-size: 15px;
+        color: #bbb;
+        margin-bottom: 4px;
+        font-weight: 500;
+    }
+
+    .track-genre {
+        font-size: 14px;
+        color: #888;
+        margin-bottom: 8px;
+    }
+
+    /* Теги */
+    .tags-container {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .tag-pill {
+        background: #222;
+        color: #ddd;
+        font-size: 12px;
+        padding: 4px 14px;
+        border-radius: 12px;
+        font-weight: 600;
+        border: 1px solid #444;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    /* Правая часть: Лайк и Цена */
+    .price-btn {
+        background: transparent;
+        color: #1db954;
+        border: 1px solid #1db954;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+        font-size: 14px;
+    }
+
+        .price-btn:hover {
+            background: #1db954;
+            color: #000;
+        }
+
+        .price-btn.sold {
+            background: #2a2a2a;
+            color: #777;
+            border-color: #444;
+            cursor: not-allowed;
+        }
+
+    .like-btn {
+        background: none;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 0;
+        transition: transform 0.2s;
+    }
+
+        .like-btn:hover {
+            transform: scale(1.2);
+        }
+
+    /* Пустое состояние */
+    .empty-favorites {
+        text-align: center;
+        padding: 80px 20px;
+        background: #141414;
+        border-radius: 16px;
+        border: 1px dashed #333;
+    }
+</style>
+
+<div class="favorites-container">
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <h2 class="fw-bold mb-0" style="color: #fff;">❤️ Избранное</h2>
+        <span class="badge rounded-pill bg-dark border border-secondary text-secondary">@Model.Count треков</span>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="empty-favorites shadow-lg">
+            <h1 style="font-size: 60px; margin-bottom: 20px;">🌘</h1>
+            <h3 class="fw-bold text-white mb-3">Ваш список избранного пуст</h3>
+            <p class="text-secondary mb-4">Добавляйте понравившиеся биты, нажимая на сердечко в каталоге.</p>
+            <a href="/Beats" class="btn btn-outline-light rounded-pill px-4 py-2 fw-bold">Перейти к битам</a>
+        </div>
+    }
+    else
+    {
+        <div class="beat-list">
+            @foreach (var beat in Model)
+            {
+                var fileName = System.IO.Path.GetFileName(beat.DemoAudioPath);
+                var demoSrc = "/File/Demo?fileName=" + fileName;
+                var producer = string.IsNullOrEmpty(beat.ProducerName) ? "unknown" : beat.ProducerName;
+                var cover = beat.CoverImagePath ?? "/images/no-image.png";
+
+                <div class="beat-row shadow-sm">
+                    <div class="list-cover">
+                        <img src="@cover" alt="@beat.Title" />
+                        <div class="bpm-badge">@(beat.Bpm) BPM</div>
+                        <div class="image-overlay">
+                            <button class="overlay-play play-btn"
+                                    data-id="@beat.Id"
+                                    data-audio="@demoSrc"
+                                    data-title="@beat.Title"
+                                    data-cover="@cover"
+                                    data-producer="@producer">
+                                <span class="icon">▶</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="info-wrapper">
+                        <div class="track-title" title="@beat.Title">@beat.Title</div>
+                        <div class="track-producer">@producer</div>
+
+                        @if (!string.IsNullOrEmpty(beat.Genre))
+                        {
+                            <div class="track-genre">@beat.Genre.Replace(",", " • ")</div>
+                        }
+                    </div>
+
+                    <div class="ms-auto d-flex align-items-center gap-4">
+
+                        <div class="d-flex align-items-center">
+                            <button onclick="toggleFavorite(@beat.Id, this)" class="like-btn">
+                                ❤️
+                            </button>
+                        </div>
+
+                        @if (beat.IsSold)
+                        {
+                            <div class="price-btn sold">🔥 SOLD</div>
+                        }
+                        else
+                        {
+                            <div class="price-btn shadow-sm" onclick="openModal(@beat.Id)">$@beat.Price</div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // 🔥 УЛУЧШЕННАЯ ЛОГИКА ДЛЯ СТРАНИЦЫ ИЗБРАННОГО
+        async function toggleFavorite(beatId, btn) {
+            try {
+                // Серверный метод тот же
+                let res = await fetch('/Profile/ToggleFavorite?beatId=' + beatId, { method: 'POST' });
+
+                if (res.ok) {
+                    let data = await res.json();
+
+                    // Если data.isLiked == false, значит юзер убрал лайк
+                    if (data.success && !data.isLiked) {
+                        // Тостер
+                        if(typeof showToast === 'function') showToast('Избранное', 'Удалено из коллекции', '🤍');
+
+                        // 🔥 ГЛАВНОЕ: Анимированно удаляем строку из списка
+                        let row = btn.closest('.beat-row');
+                        row.style.transition = 'all 0.4s ease';
+                        row.style.opacity = '0';
+                        row.style.transform = 'translateX(-20px)';
+
+                        setTimeout(() => {
+                            row.remove();
+                            // Проверяем, если список стал пустым - перезагружаем, чтобы показать "Пустое состояние"
+                            if (document.querySelectorAll('.beat-row').length === 0) {
+                                location.reload();
+                            }
+                        }, 400);
+                    }
+                }
+            } catch (e) {
+                console.error('Ошибка лайка:', e);
+            }
+        }
+    </script>
+}

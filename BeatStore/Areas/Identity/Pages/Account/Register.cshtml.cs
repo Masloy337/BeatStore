@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Identity;
+using System.Threading.Tasks;
 
 namespace BeatStore.Areas.Identity.Pages.Account
 {
@@ -21,17 +22,38 @@ namespace BeatStore.Areas.Identity.Pages.Account
         [BindProperty]
         public InputModel Input { get; set; } = new();
 
+        // Свойство для сохранения ссылки возврата
+        public string ReturnUrl { get; set; }
+
         public class InputModel
         {
-            [Required]
+            [Required(ErrorMessage = "Поле Email обязательно.")]
+            [EmailAddress(ErrorMessage = "Введите корректный Email.")]
             public string Email { get; set; } = string.Empty;
 
-            [Required]
+            [Required(ErrorMessage = "Поле Пароль обязательно.")]
+            [StringLength(100, ErrorMessage = "Пароль должен содержать не менее {2} символов.", MinimumLength = 6)]
+            [DataType(DataType.Password)]
             public string Password { get; set; } = string.Empty;
+
+            // 🔥 ВОТ ОНО! Добавили поле подтверждения пароля с проверкой на совпадение
+            [DataType(DataType.Password)]
+            [Display(Name = "Подтвердите пароль")]
+            [Compare("Password", ErrorMessage = "Пароли не совпадают.")]
+            public string ConfirmPassword { get; set; } = string.Empty;
         }
 
-        public async Task<IActionResult> OnPostAsync()
+        // Метод для получения страницы
+        public void OnGet(string returnUrl = null)
         {
+            ReturnUrl = returnUrl;
+        }
+
+        public async Task<IActionResult> OnPostAsync(string returnUrl = null)
+        {
+            returnUrl ??= Url.Content("~/Beats");
+            ReturnUrl = returnUrl;
+
             if (!ModelState.IsValid)
                 return Page();
 
@@ -46,9 +68,10 @@ namespace BeatStore.Areas.Identity.Pages.Account
             if (result.Succeeded)
             {
                 await _signInManager.SignInAsync(user, false);
-                return Redirect("/Beats");
+                return LocalRedirect(returnUrl); // Возвращаем туда, куда собирался юзер (или в каталог)
             }
 
+            // Если при регистрации возникла ошибка (например, слишком простой пароль или email уже занят)
             foreach (var error in result.Errors)
             {
                 ModelState.AddModelError(string.Empty, error.Description);

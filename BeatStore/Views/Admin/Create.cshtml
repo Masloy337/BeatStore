@@ -1,45 +1,110 @@
 ﻿@{
-    ViewData["Title"] = "Create Beat";
+    ViewData["Title"] = "Загрузка бита";
 }
 
-<h2>Upload Beat</h2>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="p-4 rounded-4 shadow-lg" style="background: #141414; border: 1px solid #333;">
+                
+                <h2 class="fw-bold mb-4 text-center" style="color: #fff;">⚡ Загрузить новый бит</h2>
 
-<form asp-controller="Admin" asp-action="Create" method="post" enctype="multipart/form-data">
-   
-    <input type="text" name="Title" placeholder="Title" /><br /><br />
+                <form asp-controller="Admin" asp-action="Create" method="post" enctype="multipart/form-data">
+                    
+                    <h5 class="text-success mb-3 fw-bold">1. Основная информация</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label text-secondary small">Название бита</label>
+                            <input type="text" name="Title" class="form-control bg-dark text-white border-secondary" placeholder="Например: Dark Knight" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-secondary small">Имя продюсера</label>
+                            <input type="text" name="ProducerName" class="form-control bg-dark text-white border-secondary" placeholder="Твой никнейм" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-secondary small">Жанр (Основной)</label>
+                            <input type="text" name="Genre" class="form-control bg-dark text-white border-secondary" placeholder="Trap, Drill..." required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-secondary small">BPM (Темп)</label>
+                            <input type="number" name="Bpm" class="form-control bg-dark text-white border-secondary" placeholder="140" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-secondary small">Базовая цена</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-success fw-bold">$</span>
+                                <input type="number" name="Price" class="form-control bg-dark text-white border-secondary" placeholder="29" required />
+                            </div>
+                        </div>
 
-    <input type="text" name="Genre" placeholder="Genre" /><br /><br />
+                        <div class="col-12 mt-3">
+                            <label class="form-label text-secondary small">Теги (вводите через запятую)</label>
+                            <input type="text" name="Tags" class="form-control bg-dark text-white border-secondary" placeholder="slayworld, summrs, kankan, underground" />
+                            <div class="form-text text-secondary" style="font-size: 11px;">Эти теги будут отображаться под названием бита красивыми кнопками.</div>
+                        </div>
+                    </div>
 
-    <input type="number" name="Bpm" placeholder="BPM" /><br /><br />
+                    <hr style="border-color: #333;" />
 
-    <!-- 🔥 ОБЩАЯ ЦЕНА (чтобы контроллер не ломался) -->
-    <input type="number" name="Price" placeholder="Base Price" /><br /><br />
+                    <h5 class="text-success mb-3 mt-4 fw-bold">2. Настройка лицензий</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label text-secondary small">Basic (MP3)</label>
+                            <input type="number" name="BasicPrice" class="form-control bg-dark text-white border-secondary" placeholder="Цена Basic" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-secondary small">Premium (WAV)</label>
+                            <input type="number" name="PremiumPrice" class="form-control bg-dark text-white border-secondary" placeholder="Цена Premium" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-secondary small">Exclusive</label>
+                            <input type="number" name="ExclusivePrice" class="form-control bg-dark text-white border-secondary" placeholder="Цена Exclusive" required />
+                        </div>
+                    </div>
 
-    <h2>Лицензии</h2>
+                    <hr style="border-color: #333;" />
 
-    <input type="number" name="BasicPrice" placeholder="MP3 цена" /><br /><br />
+                    <h5 class="text-success mb-3 mt-4 fw-bold">3. Загрузка файлов</h5>
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label text-secondary small">🎧 Demo (MP3 с тегами для плеера)</label>
+                            <input type="file" name="demoFile" class="form-control bg-dark text-white border-secondary" accept=".mp3,audio/mpeg" required />
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label text-secondary small">💿 Обложка (Квадратная)</label>
+                            <input type="file" name="imageFile" class="form-control bg-dark text-white border-secondary" accept="image/png, image/jpeg" required />
+                        </div>
 
-    <input type="number" name="PremiumPrice" placeholder="WAV цена" /><br /><br />
+                        <div class="col-md-6">
+                            <label class="form-label text-secondary small">🔥 Чистый MP3 (Для Basic лицензии)</label>
+                            <input type="file" name="mp3File" class="form-control bg-dark text-white border-secondary" accept=".mp3,audio/mpeg" required />
+                        </div>
 
-    <input type="number" name="ExclusivePrice" placeholder="Exclusive цена" /><br /><br />
-    <h2>Файлы</h2>
+                        <div class="col-md-6">
+                            <label class="form-label text-secondary small">🌊 Чистый WAV (Для Premium/Exclusive)</label>
+                            <input type="file" name="fullFile" class="form-control bg-dark text-white border-secondary" accept=".wav,audio/wav" required />
+                        </div>
+                    </div>
 
-    <label>Demo:</label>
-    <input type="file" name="demoFile" /><br /><br />
+                    <div class="d-grid mt-5">
+                        <button type="submit" class="btn btn-lg fw-bold" style="background: #1db954; color: #000; border-radius: 30px;">
+                            🚀 Опубликовать бит
+                        </button>
+                    </div>
 
-    <label>MP3 (для basic):</label>
-    <input type="file" name="mp3File" /><br /><br />
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <label>Full (WAV/MP3):</label>
-    <!-- 🔥 ВАЖНО: только fullFile -->
-    <input type="file" name="fullFile" /><br /><br />
-
-    <label>Image:</label>
-    <input type="file" name="imageFile" /><br /><br />
-
-    <h3>Имя продюсера</h3>
-    <input type="text" name="ProducerName" placeholder="Producer name" /><br /><br />
-
-    <button type="submit">Upload</button>
-
-</form>
+<style>
+    /* Небольшие фиксы для полей ввода (убираем белую рамку при фокусе) */
+    .form-control:focus {
+        background-color: #1a1a1a;
+        color: #fff;
+        border-color: #1db954;
+        box-shadow: 0 0 0 0.25rem rgba(29, 185, 84, 0.25);
+    }
+</style>

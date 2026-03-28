@@ -1,35 +1,215 @@
-﻿@model List<BeatStore.Models.Beat>
+﻿@using BeatStore.Controllers
+@model List<BeatStore.Models.Beat>
 
-<h2>🛒 Корзина</h2>
-
-@if (!Model.Any())
-{
-    <p>Корзина пуста</p>
+@{
+    ViewData["Title"] = "Корзина";
+    // Достаем из ViewBag нашу корзину с выбранными лицензиями
+    var cartItems = ViewBag.CartItems as List<CartController.CartItem> ?? new List<CartController.CartItem>();
+    decimal totalPrice = 0;
 }
-else
-{
-    <table style="width:100%;">
-        <tr>
-            <th>Бит</th>
-            <th>Цена</th>
-            <th></th>
-        </tr>
 
-        @foreach (var beat in Model)
-        {
-            <tr>
-                <td>@beat.Title</td>
-                <td>$@beat.Price</td>
-                <td>
-                    <a href="/Cart/Remove/@beat.Id">Удалить</a>
-                </td>
-            </tr>
+@functions {
+    // Вспомогательная функция для красивого вывода названия лицензии
+    public string GetLicenseDisplayName(string name)
+    {
+        if (name == "Basic") return "💿 MP3 Lease";
+        if (name == "Premium") return "🔥 WAV Premium";
+        if (name == "Exclusive") return "👑 Exclusive Rights";
+        return name ?? "Лицензия";
+    }
+}
+
+<style>
+    .cart-container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding-top: 20px;
+    }
+
+    /* Стили для карточки товара в корзине */
+    .cart-item {
+        background: #141414;
+        border: 1px solid #222;
+        border-radius: 16px;
+        padding: 15px 20px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 15px;
+        transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+        .cart-item:hover {
+            transform: translateX(5px);
+            border-color: #333;
         }
-    </table>
 
-    <br />
+    .cart-cover {
+        width: 80px;
+        height: 80px;
+        border-radius: 10px;
+        object-fit: cover;
+    }
 
-    <form method="post" asp-action="Checkout">
-        <button type="submit">💰 Купить все</button>
-    </form>
-}
+    .license-badge {
+        background: rgba(29, 185, 84, 0.1);
+        color: #1db954;
+        padding: 5px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        display: inline-block;
+        border: 1px solid rgba(29, 185, 84, 0.2);
+    }
+
+    .cart-price {
+        font-size: 22px;
+        font-weight: bold;
+        color: #fff;
+    }
+
+    /* Кнопка удаления */
+    .remove-btn {
+        color: #ff4757;
+        background: rgba(255, 71, 87, 0.05);
+        border: 1px solid rgba(255, 71, 87, 0.1);
+        width: 45px;
+        height: 45px;
+        border-radius: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        font-size: 20px;
+    }
+
+        .remove-btn:hover {
+            background: #ff4757;
+            color: #fff;
+            border-color: #ff4757;
+        }
+
+    /* Блок итоговой суммы */
+    .summary-box {
+        background: #141414;
+        border: 1px solid #222;
+        border-radius: 16px;
+        padding: 25px;
+        position: sticky;
+        top: 100px; /* Чтобы карточка прилипала при скролле */
+    }
+
+    .checkout-btn {
+        background: #1db954;
+        color: #000;
+        font-weight: 800;
+        border-radius: 30px;
+        padding: 14px;
+        width: 100%;
+        border: none;
+        transition: transform 0.2s, background 0.2s;
+        font-size: 16px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: block; /* Делаем ссылку блочной */
+        text-align: center; /* Центрируем текст */
+        text-decoration: none; /* Убираем подчеркивание */
+    }
+
+        .checkout-btn:hover {
+            background: #1ed760;
+            transform: scale(1.03);
+            color: #000;
+        }
+
+    /* Пустая корзина */
+    .empty-cart {
+        text-align: center;
+        padding: 80px 20px;
+        background: #141414;
+        border-radius: 16px;
+        border: 1px dashed #333;
+    }
+</style>
+
+<div class="cart-container">
+    <h2 class="fw-bold mb-4" style="color: #fff;">🛒 Ваша Корзина</h2>
+
+    @if (!Model.Any())
+    {
+        <div class="empty-cart shadow-lg">
+            <h1 style="font-size: 60px; margin-bottom: 20px;">🎧</h1>
+            <h3 class="fw-bold text-white mb-3">Здесь пока пусто</h3>
+            <p class="text-secondary mb-4">Найди свой идеальный звук в нашем каталоге.</p>
+            <a href="/Beats" class="btn btn-outline-light rounded-pill px-4 py-2 fw-bold">Перейти к битам</a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            <div class="col-lg-8">
+                @foreach (var beat in Model)
+                {
+                    // Ищем, какую именно лицензию выбрал пользователь для этого бита
+                    var cartItem = cartItems.FirstOrDefault(c => c.BeatId == beat.Id);
+                    if (cartItem == null) continue;
+
+                    var license = beat.Licenses?.FirstOrDefault(l => l.Id == cartItem.LicenseId);
+                    if (license == null) continue;
+
+                    totalPrice += license.Price; // Плюсуем к итоговой сумме
+                    var producer = string.IsNullOrEmpty(beat.ProducerName) ? "unknown" : beat.ProducerName;
+                    var cover = beat.CoverImagePath ?? "/images/no-image.png";
+
+                    <div class="cart-item shadow-sm">
+                        <img src="@cover" class="cart-cover" alt="@beat.Title" />
+
+                        <div class="flex-grow-1">
+                            <h5 class="fw-bold text-white mb-1">@beat.Title</h5>
+                            <div class="text-secondary small mb-2">prod. @producer</div>
+                            <div class="license-badge">
+                                @GetLicenseDisplayName(license.Name)
+                            </div>
+                        </div>
+
+                        <div class="cart-price me-3">
+                            $@license.Price
+                        </div>
+
+                        <a href="@Url.Action("Remove", "Cart", new { beatId = beat.Id })" class="remove-btn" title="Удалить из корзины">
+                            &times;
+                        </a>
+                    </div>
+                }
+            </div>
+
+            <div class="col-lg-4">
+                <div class="summary-box shadow-lg">
+                    <h4 class="fw-bold text-white mb-4">Сумма заказа</h4>
+
+                    <div class="d-flex justify-content-between mb-3 text-secondary">
+                        <span>Количество треков:</span>
+                        <span>@Model.Count</span>
+                    </div>
+
+                    <hr style="border-color: #333;" />
+
+                    <div class="d-flex justify-content-between mb-4 mt-3">
+                        <span class="fs-5 text-white">Итого:</span>
+                        <span class="fs-3 fw-bold" style="color: #1db954;">$@totalPrice</span>
+                    </div>
+
+                    <a href="/Cart/Checkout" class="checkout-btn shadow">
+                        Оформить заказ
+                    </a>
+
+                    <div class="text-center mt-3 text-secondary" style="font-size: 12px;">
+                        <i class="bi bi-shield-lock"></i> Безопасная оплата. Файлы будут доступны сразу после покупки.
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

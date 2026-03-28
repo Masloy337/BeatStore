@@ -1,22 +1,123 @@
 ﻿@page
 @model BeatStore.Areas.Identity.Pages.Account.RegisterModel
+@{
+    ViewData["Title"] = "Регистрация";
+}
 
-<h2>Регистрация</h2>
+<style>
+    /* Наследуем те же стили, что и на странице логина */
+    .auth-container {
+        min-height: 75vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-<form method="post">
-    @Html.AntiForgeryToken()
+    .auth-card {
+        background: #141414;
+        border: 1px solid #222;
+        border-radius: 20px;
+        padding: 40px;
+        width: 100%;
+        max-width: 450px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
 
-    <div>
-        <label>Email</label>
-        <input asp-for="Input.Email" />
+    .auth-input {
+        background: #0a0a0a !important;
+        border: 1px solid #333 !important;
+        color: #fff !important;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+        .auth-input:focus {
+            border-color: #1db954 !important;
+            box-shadow: 0 0 0 0.25rem rgba(29, 185, 84, 0.15) !important;
+        }
+
+    .form-floating > label {
+        color: #888;
+    }
+
+    .form-floating > .form-control:focus ~ label,
+    .form-floating > .form-control:not(:placeholder-shown) ~ label {
+        color: #1db954;
+        transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
+        background: transparent;
+    }
+
+    .auth-btn {
+        background: #1db954;
+        color: #000;
+        font-weight: 800;
+        border-radius: 30px;
+        padding: 14px;
+        width: 100%;
+        border: none;
+        transition: transform 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 15px;
+    }
+
+        .auth-btn:hover {
+            background: #1ed760;
+            transform: scale(1.03);
+        }
+
+    .auth-link {
+        color: #1db954;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+        .auth-link:hover {
+            color: #1ed760;
+            text-decoration: underline;
+        }
+</style>
+
+<div class="auth-container">
+    <div class="auth-card shadow-lg">
+
+        <div class="text-center mb-4">
+            <h2 class="fw-bold text-white mb-2">Создать аккаунт 🚀</h2>
+            <p class="text-secondary small">Присоединяйся к премиальному магазину битов</p>
+        </div>
+
+        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small" role="alert"></div>
+
+            <div class="form-floating mb-3">
+                <input asp-for="Input.Email" class="form-control auth-input" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                <label asp-for="Input.Email">Email адрес</label>
+                <span asp-validation-for="Input.Email" class="text-danger small"></span>
+            </div>
+
+            <div class="form-floating mb-3">
+                <input asp-for="Input.Password" class="form-control auth-input" autocomplete="new-password" aria-required="true" placeholder="password" />
+                <label asp-for="Input.Password">Пароль</label>
+                <span asp-validation-for="Input.Password" class="text-danger small"></span>
+            </div>
+
+            <div class="form-floating mb-4">
+                <input asp-for="Input.ConfirmPassword" class="form-control auth-input" autocomplete="new-password" aria-required="true" placeholder="password" />
+                <label asp-for="Input.ConfirmPassword">Повторите пароль</label>
+                <span asp-validation-for="Input.ConfirmPassword" class="text-danger small"></span>
+            </div>
+
+            <button id="registerSubmit" type="submit" class="auth-btn shadow">Зарегистрироваться</button>
+
+            <div class="text-center mt-4">
+                <p class="text-secondary mb-1 small">Уже есть аккаунт?</p>
+                <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl" class="auth-link fw-bold">Войти в систему</a>
+            </div>
+        </form>
+
     </div>
+</div>
 
-    <div>
-        <label>Password</label>
-        <input asp-for="Input.Password" type="password" />
-    </div>
-
-    <button type="submit">Register</button>
-
-    <div asp-validation-summary="All" style="color:red;"></div>
-</form>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
