@@ -6,7 +6,7 @@
     // Генерируем абсолютные ссылки для SEO
     var request = ViewContext.HttpContext.Request;
     var absoluteUrl = $"{request.Scheme}://{request.Host}{request.Path}";
-    var absoluteImageUrl = $"{request.Scheme}://{request.Host}{Model.CoverImagePath ?? "/images/no-image.png"}";
+    var absoluteImageUrl = $"{request.Scheme}://{request.Host}{(Model.CoverImagePath ?? "/images/no-image.png")}";
     var description = $"🔥 BPM: {Model.Bpm} | Жанр: {Model.Genre} | Слушай и покупай лицензию на новый бит от {Model.ProducerName}";
 }
 
@@ -20,6 +20,28 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="@Model.Title | prod. @Model.ProducerName">
     <meta name="twitter:image" content="@absoluteImageUrl">
+
+    <script type="application/ld+json">
+        {
+          "@@context": "https://schema.org/",
+          "@@type": "Product",
+          "name": "@Model.Title",
+          "image": "@absoluteImageUrl",
+          "description": "@description",
+          "brand": {
+            "@@type": "Brand",
+            "name": "BeatStore"
+          },
+          "offers": {
+            "@@type": "Offer",
+            "url": "@absoluteUrl",
+            "priceCurrency": "USD",
+            "price": "@Model.Price.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)",
+            "availability": "@(Model.IsSold ? "https://schema.org/OutOfStock" : "https://schema.org/InStock")",
+            "itemCondition": "https://schema.org/NewCondition"
+          }
+        }
+    </script>
 }
 
 <style>
@@ -136,6 +158,21 @@
         .btn-cart-big:hover {
             background: #fff;
             color: #000;
+        }
+
+    .tag-pill {
+        background: #222;
+        color: #aaa;
+        padding: 5px 15px;
+        border-radius: 20px;
+        text-decoration: none;
+        font-size: 13px;
+        transition: 0.2s;
+    }
+
+        .tag-pill:hover {
+            background: #333;
+            color: #fff;
         }
 
     .tags-section {

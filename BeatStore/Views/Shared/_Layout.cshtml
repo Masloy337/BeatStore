@@ -18,23 +18,120 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#0a0a0a" />
     <title>BeatStore - Premium Beats</title>
 
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
 
     <script src="https://cdn.jsdelivr.net/npm/@@hotwired/turbo@8.0.4/dist/turbo.es2017-umd.js"></script>
+
+    @RenderSection("MetaTags", required: false)
     <style>
-        /* --- БАЗОВЫЕ СТИЛИ --- */
+        /* 1. ФИКС БЕЛОГО ФОНА */
+        html {
+            background-color: #0a0a0a !important;
+        }
+
         body {
             background-color: #0a0a0a;
             color: #f0f0f0;
             font-family: 'Inter', 'Segoe UI', sans-serif;
             margin: 0;
             padding-bottom: 110px;
+            overscroll-behavior-y: none;
         }
 
-        /* --- НАВИГАЦИЯ --- */
+        /* =========================================
+                   🔥 МОБИЛЬНАЯ АДАПТАЦИЯ (ИСПРАВЛЕННАЯ) 🔥
+                   ========================================= */
+        @@media (max-width: 768px) {
+            /* --- 1. ШАПКА --- */
+            .nav {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                align-items: center !important;
+                gap: 15px !important;
+                padding: 10px 15px !important;
+                -webkit-overflow-scrolling: touch;
+            }
+
+                .nav > div, .nav > form, .nav > a {
+                    display: flex !important;
+                    flex-direction: row !important;
+                    align-items: center !important;
+                    gap: 15px !important;
+                    white-space: nowrap !important;
+                    flex-shrink: 0 !important;
+                }
+
+                .nav span.user-name {
+                    display: none !important;
+                }
+
+                .nav::-webkit-scrollbar {
+                    display: none;
+                }
+            /* --- 2. ПЛЕЕР --- */
+            .global-player {
+                padding: 10px 15px !important;
+                padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+                gap: 10px !important;
+                height: auto !important;
+                min-height: 80px;
+            }
+            /* Левый блок забирает оставшееся место, но не выталкивает кнопки */
+            .gp-left {
+                width: auto !important;
+                flex: 1 !important;
+                min-width: 0 !important; /* Обязательно для обрезки текста */
+                gap: 10px !important;
+            }
+
+                .gp-left img {
+                    width: 45px !important;
+                    height: 45px !important;
+                    min-width: 45px !important;
+                }
+
+            .gp-info {
+                min-width: 0 !important;
+            }
+
+            .gp-title {
+                font-size: 14px !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important; /* Добавляет "..." если не влезает */
+            }
+            /* Кнопки плеера берут только нужную ширину */
+            .gp-controls {
+                flex: none !important;
+                width: auto !important;
+                gap: 12px !important;
+            }
+            /* Правый блок (Корзина + Крестик) */
+            .gp-right {
+                flex: none !important;
+                width: auto !important;
+                gap: 10px !important;
+            }
+            /* 🔥 Прячем всё второстепенное на мобилках */
+            .gp-time-display,
+            .gp-volume-container,
+            .gp-repeat-btn,
+            button[title="Поделиться"] {
+                display: none !important;
+            }
+            /* Делаем корзину чуть компактнее */
+            .gp-cart-btn {
+                padding: 6px 12px !important;
+            }
+        }
+
+        /* --- БАЗОВЫЕ СТИЛИ (ДЕСКТОП) --- */
         .nav {
             background: rgba(18, 18, 26, 0.8);
             backdrop-filter: blur(10px);
@@ -135,7 +232,7 @@
             color: #aaa;
         }
 
-        /* --- 🔥 ИДЕАЛЬНЫЙ ПЛЕЕР С SVG ИКОНКАМИ --- */
+        /* --- ПЛЕЕР --- */
         .global-player {
             position: fixed;
             bottom: 0;
@@ -260,18 +357,6 @@
             font-weight: 500;
         }
 
-        .gp-tags {
-            display: flex;
-            gap: 6px;
-            transform: scale(0.85);
-            transform-origin: left center;
-        }
-
-            .gp-tags a {
-                pointer-events: none;
-                text-decoration: none;
-            }
-
         .gp-controls {
             display: flex;
             align-items: center;
@@ -394,7 +479,6 @@
             width: 35%;
         }
 
-        /* 🔥 Обновленная кнопка Корзины с увеличенной SVG-иконкой */
         .gp-cart-btn {
             background: transparent;
             border: 1px solid #1db954;
@@ -471,9 +555,7 @@
     </div>
 
     <div id="turbo-permanent-wrapper" data-turbo-permanent="true">
-
         <div id="global-player" class="global-player" style="transform: translateY(150%);">
-
             <audio id="global-audio-element" src=""></audio>
 
             <div class="gp-progress-container">
@@ -486,7 +568,6 @@
                 <div class="gp-info">
                     <div class="gp-title-row">
                         <div id="gp-title" class="gp-title">Название трека</div>
-                       
                     </div>
                     <div id="gp-producer" class="gp-producer">Продюсер</div>
                 </div>
@@ -540,7 +621,6 @@
         <div id="toast-container" style="position: fixed; bottom: 100px; right: 20px; z-index: 1060; display: flex; flex-direction: column; gap: 10px;"></div>
 
         <script>
-            // 🔥 1. Привязываем переменные к window
             window.audioPlayer = window.audioPlayer || document.getElementById('global-audio-element');
             window.playerQueue = window.playerQueue || [];
             window.currentIndex = window.currentIndex !== undefined ? window.currentIndex : -1;
@@ -549,7 +629,6 @@
             window.svgPlay = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
             window.svgPause = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
 
-            // 🔥 2. Глобальная функция уведомлений
             window.showToast = function(title, message, icon = '🛒') {
                 let container = document.getElementById('toast-container');
                 if (!container) return;
@@ -561,7 +640,6 @@
                 setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
             };
 
-            // 🔥 3. Функции плеера
             window.buildQueue = function() {
                 window.playerQueue = [];
                 document.querySelectorAll('.play-btn').forEach(btn => {
@@ -612,7 +690,7 @@
                 document.getElementById('gp-title').innerText = track.title;
                 document.getElementById('gp-producer').innerText = track.producer;
                 document.getElementById('gp-cover').src = track.cover;
-               
+
                 document.getElementById('gp-price').innerText = track.price;
 
                 document.getElementById('global-player').classList.add('show');
@@ -645,7 +723,6 @@
                 }
             };
 
-            // 🔥 4. ЗАЩИТА ОТ ДУБЛИРОВАНИЯ СОБЫТИЙ (Выполняется строго 1 раз)
             if (!window.playerEventsAttached) {
                 window.playerEventsAttached = true;
 
@@ -699,7 +776,6 @@
                 });
             }
 
-            // 🔥 5. ЛОГИКА ЛАЙКОВ
             window.toggleFavorite = function(beatId, btnElement) {
                 fetch(`/Profile/ToggleFavorite?beatId=${beatId}`, { method: 'POST' })
                 .then(response => {

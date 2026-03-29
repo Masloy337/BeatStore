@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using BeatStore.Data;
-
+using Resend;
 var builder = WebApplication.CreateBuilder(args);
 
 // 🔥 БД
@@ -28,7 +28,13 @@ builder.Services.AddSession(options =>
 // 🔥 MVC + Razor
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
-
+// Подключаем сам Resend, забирая токен из appsettings.json
+builder.Services.AddOptions();
+builder.Services.AddHttpClient<ResendClient>();
+builder.Services.Configure<ResendClientOptions>(builder.Configuration.GetSection("Resend"));
+builder.Services.AddTransient<IResend, ResendClient>();
+// Регистрируем наш сервис писем
+builder.Services.AddTransient<BeatStore.Services.IEmailService, BeatStore.Services.EmailService>();
 var app = builder.Build();
 
 // 🔥 Middleware
@@ -36,7 +42,15 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
 }
+if (!app.Environment.IsDevelopment())
+{
+    // Если произошла фатальная ошибка в коде (500)
+    app.UseExceptionHandler("/Errors/500");
+    app.UseHsts();
+}
 
+// 🔥 Перехватываем 404 и другие ошибки статус-кодов
+app.UseStatusCodePagesWithReExecute("/Errors/{0}");
 app.UseStaticFiles();
 
 app.UseRouting();
@@ -58,26 +72,33 @@ app.MapRazorPages();
 // 🔥 СОЗДАНИЕ ADMIN (ОДИН РАЗ)
 using (var scope = app.Services.CreateScope())
 {
-    var services = scope.ServiceProvider;
+    var roleManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.RoleManager<Microsoft.AspNetCore.Identity.IdentityRole>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Microsoft.AspNetCore.Identity.IdentityUser>>();
 
-    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-    var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
-
-    // создаем роль Admin
+    // 1. Убеждаемся, что роль "Admin" физически существует в базе
     if (!await roleManager.RoleExistsAsync("Admin"))
     {
-        await roleManager.CreateAsync(new IdentityRole("Admin"));
+        await roleManager.CreateAsync(new Microsoft.AspNetCore.Identity.IdentityRole("Admin"));
     }
 
-    // 👇 ТВОЙ EMAIL
-    var email = "test@test.com";
+    // 2. ВПИШИ СЮДА ВАШИ РЕАЛЬНЫЕ ПОЧТЫ (под которыми вы зарегистрируетесь на сайте)
+    var immortalAdmins = new[] {
+        "kipishgesh@gmail.com",
+        "luzylego@gmail.com"
+    };
 
-    var user = await userManager.FindByEmailAsync(email);
-
-    if (user != null && !await userManager.IsInRoleAsync(user, "Admin"))
+    foreach (var email in immortalAdmins)
     {
-        await userManager.AddToRoleAsync(user, "Admin");
+        var user = await userManager.FindByEmailAsync(email);
+        if (user != null)
+        {
+            // Если вы есть в базе, но еще не админы — система выдает вам права
+            if (!await userManager.IsInRoleAsync(user, "Admin"))
+            {
+                await userManager.AddToRoleAsync(user, "Admin");
+            }
+        }
     }
 }
 
-app.Run();
+app.Run(); 

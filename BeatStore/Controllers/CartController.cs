@@ -4,17 +4,21 @@ using BeatStore.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text.Json;
-using Microsoft.AspNetCore.Authorization; // 🔥 Добавили для атрибута [Authorize]
+using Microsoft.AspNetCore.Authorization;
+using BeatStore.Services; // 🔥 1. Добавили пространство имен нашего сервиса писем
 
 namespace BeatStore.Controllers
 {
     public class CartController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IEmailService _emailService; // 🔥 2. Добавили поле для сервиса
 
-        public CartController(ApplicationDbContext context)
+        // 🔥 3. Внедрили сервис в конструктор
+        public CartController(ApplicationDbContext context, IEmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         public class CartItem
@@ -35,7 +39,6 @@ namespace BeatStore.Controllers
             HttpContext.Session.SetString("cart", JsonSerializer.Serialize(cart));
         }
 
-        // ➕ Добавить в корзину (AJAX версия)
         [HttpPost]
         public IActionResult Add(int beatId, int licenseId)
         {
@@ -56,7 +59,6 @@ namespace BeatStore.Controllers
             return Json(new { success = true, message = "Бит добавлен в корзину", cartCount = cart.Count });
         }
 
-        // 🧾 Страница корзины
         public async Task<IActionResult> Index()
         {
             var cart = GetCart();
@@ -72,7 +74,6 @@ namespace BeatStore.Controllers
             return View(beats);
         }
 
-        // ❌ Удалить из корзины
         public IActionResult Remove(int beatId)
         {
             var cart = GetCart();
@@ -87,7 +88,6 @@ namespace BeatStore.Controllers
             return RedirectToAction("Index");
         }
 
-        // 🔥 1. СТРАНИЦА ОФОРМЛЕНИЯ ЗАКАЗА (GET-запрос)
         [Authorize]
         [HttpGet]
         public async Task<IActionResult> Checkout()
@@ -95,12 +95,11 @@ namespace BeatStore.Controllers
             var cart = GetCart();
             if (!cart.Any())
             {
-                return RedirectToAction("Index"); // Если корзина пуста - кидаем обратно
+                return RedirectToAction("Index");
             }
 
             decimal totalAmount = 0;
 
-            // Считаем сумму прямо из базы данных для безопасности
             foreach (var item in cart)
             {
                 var license = await _context.Licenses.FindAsync(item.LicenseId);
@@ -111,10 +110,9 @@ namespace BeatStore.Controllers
             }
 
             ViewBag.TotalAmount = totalAmount;
-            return View(); // Отдаст страницу Checkout.cshtml, которую мы создали
+            return View();
         }
 
-        // 🔥 2. СИМУЛЯЦИЯ ОПЛАТЫ И ВЫДАЧА БИТОВ (POST-запрос)
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
@@ -124,6 +122,12 @@ namespace BeatStore.Controllers
             if (!cart.Any()) return RedirectToAction("Index");
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            // 🔥 Получаем email текущего пользователя
+            var userEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity.Name;
+
+            // Временный список для хранения успешных заказов, чтобы отправить по ним письма
+            var successfulOrders = new List<(Order order, string trackTitle, string licenseName)>();
 
             foreach (var item in cart)
             {
@@ -136,29 +140,27 @@ namespace BeatStore.Controllers
                 var license = beat.Licenses?.FirstOrDefault(l => l.Id == item.LicenseId);
                 if (license == null) continue;
 
-                // Защита: Если бит уже купили эксклюзивно пока мы были в корзине
                 if (beat.IsSold) continue;
 
-                // Защита: Уже куплен этот бит с этой лицензией этим юзером?
                 var alreadyBought = await _context.Orders
                     .AnyAsync(o => o.UserId == userId && o.BeatId == beat.Id && o.LicenseId == license.Id);
 
                 if (alreadyBought) continue;
 
-                // Создаем заказ
                 var order = new Order
                 {
                     UserId = userId,
                     BeatId = beat.Id,
                     LicenseId = license.Id,
-                    // 🔥 ТЕПЕРЬ ОШИБКИ НЕ БУДЕТ, СОХРАНЯЕМ ЦЕНУ:
                     Price = license.Price,
                     CreatedAt = DateTime.Now
                 };
 
                 _context.Orders.Add(order);
 
-                // Если купили Exclusive — навсегда снимаем бит с продажи
+                // 🔥 Сохраняем информацию для письма
+                successfulOrders.Add((order, beat.Title, license.Name));
+
                 if (license.Name == "Exclusive")
                 {
                     beat.IsSold = true;
@@ -166,16 +168,33 @@ namespace BeatStore.Controllers
                 }
             }
 
+            // 🔥 Сохраняем в БД. Только ПОСЛЕ этого у order.Id появится реальный номер (например, 15)
             await _context.SaveChangesAsync();
 
-            // Очищаем сессию корзины после успешной оплаты
+            // 🔥 4. РАССЫЛКА ПИСЕМ
+            if (!string.IsNullOrEmpty(userEmail))
+            {
+                foreach (var record in successfulOrders)
+                {
+                    try
+                    {
+                        // Отправляем письмо с реальным ID заказа
+                        await _emailService.SendOrderReceiptAsync(userEmail, record.trackTitle, record.licenseName, record.order.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Если Resend выдаст ошибку (например, не тот email для тестов), 
+                        // мы ловим её здесь, чтобы пользователь всё равно попал на страницу Success!
+                        Console.WriteLine($"Ошибка отправки письма: {ex.Message}");
+                    }
+                }
+            }
+
             HttpContext.Session.Remove("cart");
 
-            // Перекидываем на красивую страницу успеха
             return RedirectToAction("Success");
         }
 
-        // 🔥 3. СТРАНИЦА УСПЕХА
         [Authorize]
         public IActionResult Success()
         {

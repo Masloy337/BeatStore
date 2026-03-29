@@ -8,6 +8,21 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+    @@media (max-width: 768px) {
+        /* Таблицу делаем скролльной по горизонтали */
+        .table-container {
+            overflow-x: auto;
+        }
+        /* Карточки статистики делаем по одной в ряд */
+        .stat-card {
+            margin-bottom: 15px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+        }
+    }
+
     .dashboard-container {
         max-width: 1200px;
         margin: 0 auto;

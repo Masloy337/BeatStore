@@ -5,6 +5,86 @@
     var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 }
 
+@section MetaTags {
+    <script type="application/ld+json">
+        {
+          "@@context": "https://schema.org/",
+          "@@type": "ItemList",
+          "name": "Каталог битов BeatStore",
+          "description": "Лучшие премиальные биты от Illuzy.",
+          "itemListElement": [
+            @for (int i = 0; i < Model.Beats.Count; i++)
+            {
+                        var beat = Model.Beats[i];
+                        var absoluteUrl = $"{Context.Request.Scheme}://{Context.Request.Host}/Beats?searchString={beat.Title}";
+                        var absoluteImageUrl = $"{Context.Request.Scheme}://{Context.Request.Host}{(beat.CoverImagePath ?? "/images/no-image.png")}";
+
+                        <text>
+                        {
+                          "@@type": "ListItem",
+                          "position": @(i + 1),
+                          "item": {
+                            "@@type": "Product",
+                            "name": "@beat.Title",
+                            "image": "@absoluteImageUrl",
+                            "description": "@beat.Genre бит, @beat.Bpm BPM. Продюсер: @beat.ProducerName",
+                            "sku": "BEAT-@beat.Id",
+                            "mpn": "@beat.Id",
+                            "brand": {
+                              "@@type": "Brand",
+                              "name": "BeatStore"
+                            },
+                            "offers": {
+                              "@@type": "Offer",
+                              "url": "@absoluteUrl",
+                              "priceCurrency": "USD",
+                              "price": "@beat.Price.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)",
+                              "priceValidUntil": "@DateTime.Now.AddYears(1).ToString("yyyy-MM-dd")",
+                              "availability": "https://schema.org/InStock",
+                              "itemCondition": "https://schema.org/NewCondition",
+                              "shippingDetails": {
+                                "@@type": "OfferShippingDetails",
+                                "shippingRate": {
+                                  "@@type": "MonetaryAmount",
+                                  "value": "0",
+                                  "currency": "USD"
+                                },
+                                "shippingDestination": {
+                                    "@@type": "DefinedRegion",
+                                    "addressCountry": "US"
+                                },
+                                "deliveryTime": {
+                                  "@@type": "ShippingDeliveryTime",
+                                  "handlingTime": {
+                                    "@@type": "QuantitativeValue",
+                                    "minValue": 0,
+                                    "maxValue": 0,
+                                    "unitCode": "DAY"
+                                  },
+                                  "transitTime": {
+                                    "@@type": "QuantitativeValue",
+                                    "minValue": 0,
+                                    "maxValue": 0,
+                                    "unitCode": "DAY"
+                                  }
+                                }
+                              },
+                              "hasMerchantReturnPolicy": {
+                                "@@type": "MerchantReturnPolicy",
+                                "applicableCountry": "US",
+                                "returnPolicyCategory": "https://schema.org/UnspecifiedReturnPolicy",
+                                "merchantReturnDays": 0
+                              }
+                            }
+                          }
+                        } @(i < Model.Beats.Count - 1 ? "," : "")
+                        </text>
+            }
+          ]
+        }
+    </script>
+}
+
 <style>
     /* --- СЕТКИ И СПИСКИ --- */
     .beat-grid {
@@ -162,7 +242,7 @@
             transform: scale(1.05);
         }
 
-    /* --- 🔥 СТРОКА БИТА В КАТАЛОГЕ --- */
+    /* --- СТРОКА БИТА В КАТАЛОГЕ --- */
     .beat-row {
         display: flex;
         align-items: center;
@@ -377,6 +457,7 @@
             transform: scale(1.2);
         }
 
+    /* Модальное окно */
     .license-card {
         background: #1a1a1a;
         padding: 15px;
@@ -410,6 +491,42 @@
         margin-top: 10px;
         padding-top: 10px;
         border-top: 1px solid #333;
+    }
+
+    /* 🔥 МОБИЛЬНАЯ АДАПТАЦИЯ ДЛЯ КАТАЛОГА 🔥 */
+    @@media (max-width: 768px) {
+        /* Делаем поиск на всю ширину */
+        .search-input-group {
+            max-width: 100%;
+        }
+        /* Сетка ТОП битов становится компактнее */
+        .beat-grid {
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 15px;
+        }
+
+        .beat-card .image-wrapper img {
+            height: 160px;
+        }
+        /* Строка обычного бита перестраивается */
+        .beat-row {
+            flex-wrap: wrap; /* Позволяем элементам переноситься */
+            gap: 15px;
+            padding: 15px;
+        }
+
+            .beat-row:hover {
+                transform: none;
+            }
+            /* Отключаем выезд вправо на мобилках */
+            /* Кнопки лайка и цены переносятся на новую строку и занимают всю ширину */
+            .beat-row .ms-auto {
+                width: 100%;
+                margin-left: 0 !important;
+                justify-content: space-between !important;
+                border-top: 1px solid #222;
+                padding-top: 12px;
+            }
     }
 </style>
 
@@ -677,9 +794,8 @@ else
         return `✔ Полные коммерческие права<br>✔ Без лимитов на стримы и копии<br>✔ Бит удаляется из магазина после покупки<br>🎧 Формат: MP3 + WAV + Trackouts`;
     }
 
-    // 🔥 ОБНОВЛЕННАЯ ЛОГИКА ПЛЕЕРА ДЛЯ TURBO (Делегирование)
+    // ЛОГИКА ПЛЕЕРА ДЛЯ TURBO
     document.addEventListener('click', function(e) {
-        // Ищем, был ли клик по кнопке с классом play-btn или по её внутренностям (например, по иконке)
         const btn = e.target.closest('.play-btn');
 
         if (btn) {

@@ -13,7 +13,7 @@ namespace BeatStore.Controllers
     public class AdminController : Controller
     {
         private readonly ApplicationDbContext _context;
-        // 🔥 1. ДОБАВЛЕН СЕРВИС ОКРУЖЕНИЯ ДЛЯ ПРАВИЛЬНЫХ ПУТЕЙ
+        // 🔥 1. СЕРВИС ОКРУЖЕНИЯ ДЛЯ ПРАВИЛЬНЫХ ПУТЕЙ
         private readonly IWebHostEnvironment _env;
 
         public AdminController(ApplicationDbContext context, IWebHostEnvironment env)
@@ -74,7 +74,7 @@ namespace BeatStore.Controllers
             return View(beats);
         }
 
-        // 🔥 2. ОБНОВЛЕННЫЙ AJAX-МЕТОД СОЗДАНИЯ БИТА С ЛИЦЕНЗИЯМИ И ТВОИМИ ПАПКАМИ
+        // 🔥 2. AJAX-МЕТОД СОЗДАНИЯ БИТА С ЛИЦЕНЗИЯМИ И ЗАЩИЩЕННЫМИ ПАПКАМИ
         [HttpPost]
         [DisableRequestSizeLimit]
         [RequestFormLimits(MultipartBodyLengthLimit = 1073741824)]
@@ -177,7 +177,7 @@ namespace BeatStore.Controllers
             }
         }
 
-        // 🔥 3. ИСПРАВЛЕННЫЙ МЕТОД DELETE (Решен баг с путями)
+        // 🔥 3. МЕТОД DELETE СО ВСЕМИ ПУТЯМИ ОЧИСТКИ
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult Delete(int id)
@@ -224,18 +224,6 @@ namespace BeatStore.Controllers
             return RedirectToAction("List");
         }
 
-        public async Task<IActionResult> MakeAdmin()
-        {
-            var userManager = HttpContext.RequestServices.GetRequiredService<UserManager<IdentityUser>>();
-            var user = await userManager.FindByNameAsync("test2");
-
-            if (user != null)
-            {
-                await userManager.AddToRoleAsync(user, "Admin");
-            }
-
-            return Content("test2 теперь Admin");
-        }
         // 1. GET: Выводим страницу редактирования с заполненными данными
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
@@ -249,7 +237,7 @@ namespace BeatStore.Controllers
             return View(beat);
         }
 
-        // 2. POST: Сохраняем изменения (через AJAX)
+        // 2. POST: Сохраняем изменения (через AJAX) с полной поддержкой всех файлов
         [HttpPost]
         [DisableRequestSizeLimit]
         public async Task<IActionResult> EditBeatAjax(
@@ -274,44 +262,72 @@ namespace BeatStore.Controllers
                 var root = _env.ContentRootPath;
                 var webRoot = _env.WebRootPath;
 
-                // 🔥 ЛОГИКА ОБНОВЛЕНИЯ ФАЙЛОВ: Если пришел новый файл -> удаляем старый -> сохраняем новый
+                // 🔥 ЛОГИКА ОБНОВЛЕНИЯ ФАЙЛОВ: удаляем старый -> сохраняем новый
 
+                // 1. Изображение
                 if (imageFile != null)
                 {
                     if (!string.IsNullOrEmpty(beat.CoverImagePath))
                     {
-                        var oldPath = Path.Combine(webRoot, beat.CoverImagePath.TrimStart('/'));
+                        var oldPath = Path.Combine(webRoot, "uploads", "images", Path.GetFileName(beat.CoverImagePath));
                         if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
                     }
                     var name = Guid.NewGuid() + Path.GetExtension(imageFile.FileName);
-                    using var stream = new FileStream(Path.Combine(webRoot, "uploads/images", name), FileMode.Create);
+                    using var stream = new FileStream(Path.Combine(webRoot, "uploads", "images", name), FileMode.Create);
                     await imageFile.CopyToAsync(stream);
                     beat.CoverImagePath = "/uploads/images/" + name;
                 }
 
+                // 2. Демо файл
                 if (demoFile != null)
                 {
                     if (!string.IsNullOrEmpty(beat.DemoAudioPath))
                     {
-                        var oldPath = Path.Combine(root, "Storage/demo", beat.DemoAudioPath);
+                        var oldPath = Path.Combine(root, "Storage", "demo", Path.GetFileName(beat.DemoAudioPath));
                         if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
                     }
                     var name = Guid.NewGuid() + Path.GetExtension(demoFile.FileName);
-                    using var stream = new FileStream(Path.Combine(root, "Storage/demo", name), FileMode.Create);
+                    using var stream = new FileStream(Path.Combine(root, "Storage", "demo", name), FileMode.Create);
                     await demoFile.CopyToAsync(stream);
                     beat.DemoAudioPath = name;
                 }
 
-                // ... (аналогично для mp3File и fullFile, если нужно обновлять)
+                // 3. MP3 файл
+                if (mp3File != null)
+                {
+                    if (!string.IsNullOrEmpty(beat.Mp3AudioPatch))
+                    {
+                        var oldPath = Path.Combine(root, "Storage", "mp3", Path.GetFileName(beat.Mp3AudioPatch));
+                        if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
+                    }
+                    var name = Guid.NewGuid() + Path.GetExtension(mp3File.FileName);
+                    using var stream = new FileStream(Path.Combine(root, "Storage", "mp3", name), FileMode.Create);
+                    await mp3File.CopyToAsync(stream);
+                    beat.Mp3AudioPatch = name;
+                }
+
+                // 4. Full файл (WAV/ZIP)
+                if (fullFile != null)
+                {
+                    if (!string.IsNullOrEmpty(beat.FullAudioPath))
+                    {
+                        var oldPath = Path.Combine(root, "Storage", "full", Path.GetFileName(beat.FullAudioPath));
+                        if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
+                    }
+                    var name = Guid.NewGuid() + Path.GetExtension(fullFile.FileName);
+                    using var stream = new FileStream(Path.Combine(root, "Storage", "full", name), FileMode.Create);
+                    await fullFile.CopyToAsync(stream);
+                    beat.FullAudioPath = name;
+                }
 
                 // 🔥 ОБНОВЛЯЕМ ЦЕНЫ ЛИЦЕНЗИЙ
-                var basic = beat.Licenses.FirstOrDefault(l => l.Name == "Basic");
+                var basic = beat.Licenses?.FirstOrDefault(l => l.Name == "Basic");
                 if (basic != null) basic.Price = BasicPrice;
 
-                var premium = beat.Licenses.FirstOrDefault(l => l.Name == "Premium");
+                var premium = beat.Licenses?.FirstOrDefault(l => l.Name == "Premium");
                 if (premium != null) premium.Price = PremiumPrice;
 
-                var exclusive = beat.Licenses.FirstOrDefault(l => l.Name == "Exclusive");
+                var exclusive = beat.Licenses?.FirstOrDefault(l => l.Name == "Exclusive");
                 if (exclusive != null) exclusive.Price = ExclusivePrice;
 
                 await _context.SaveChangesAsync();
