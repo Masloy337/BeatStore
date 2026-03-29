@@ -26,7 +26,6 @@
     <Folder Include="Storage\demo\" />
     <Folder Include="Storage\full\" />
     <Folder Include="Storage\mp3\" />
-    <Folder Include="ViewModels\" />
     <Folder Include="wwwroot\css\" />
     <Folder Include="wwwroot\fonts\" />
     <Folder Include="wwwroot\js\" />

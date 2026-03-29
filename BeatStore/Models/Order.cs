@@ -16,5 +16,6 @@ namespace BeatStore.Models
         public DateTime CreatedAt { get; set; }
         public int? LicenseId { get; set; }
         public License? License { get; set; }
+        public decimal Price { get; set; }
     }
 }

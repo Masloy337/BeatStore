@@ -1,259 +1,255 @@
 ﻿@model BeatStore.Models.AdminStatsViewModel
+@using System.Text.Json
 
 @{
-    ViewData["Title"] = "Дэшборд";
+    ViewData["Title"] = "Статистика продаж";
 }
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
-    /* 🔥 КАРТОЧКИ СТАТИСТИКИ */
+    .dashboard-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    /* Карточки со статистикой */
     .stat-card {
         background: #141414;
         border: 1px solid #222;
         border-radius: 16px;
         padding: 25px;
+        text-align: center;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        height: 100%;
         display: flex;
         flex-direction: column;
         justify-content: center;
-        transition: transform 0.3s ease, border-color 0.3s ease;
-        height: 100%;
-        position: relative;
-        overflow: hidden;
     }
 
         .stat-card:hover {
             transform: translateY(-5px);
-            border-color: #333;
+            box-shadow: 0 10px 20px rgba(29, 185, 84, 0.1);
+            border-color: #1db954;
         }
-
-    .stat-icon {
-        font-size: 30px;
-        margin-bottom: 10px;
-        opacity: 0.8;
-    }
-
-    .stat-value {
-        font-size: 36px;
-        font-weight: 800;
-        color: #fff;
-        line-height: 1.2;
-    }
 
     .stat-title {
         color: #888;
-        font-size: 13px;
+        font-size: 14px;
+        font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 1px;
-        font-weight: 700;
-        margin-bottom: 5px;
+        margin-bottom: 10px;
     }
 
-    /* Фоновое свечение для карточки дохода */
-    .glow-bg {
-        position: absolute;
-        top: -50px;
-        right: -50px;
-        width: 150px;
-        height: 150px;
-        background: radial-gradient(circle, rgba(29, 185, 84, 0.15) 0%, rgba(0,0,0,0) 70%);
-        border-radius: 50%;
-        pointer-events: none;
+    .stat-value {
+        color: #fff;
+        font-size: 36px;
+        font-weight: 800;
+        margin: 0;
     }
 
-    /* 🔥 ПРЕМИАЛЬНАЯ ТАБЛИЦА */
+        .stat-value.money {
+            color: #1db954;
+        }
+
+        .stat-value.fire {
+            color: #ff4757;
+            font-size: 28px;
+        }
+    /* Чуть меньше для текста */
+
+    /* Блок графика */
+    .chart-container {
+        background: #141414;
+        border: 1px solid #222;
+        border-radius: 16px;
+        padding: 25px;
+        margin-top: 30px;
+    }
+
+    /* Таблица битов */
     .table-container {
         background: #141414;
         border: 1px solid #222;
         border-radius: 16px;
-        padding: 20px;
+        padding: 25px;
         margin-top: 30px;
+        overflow-x: auto;
     }
 
-    .custom-table {
-        width: 100%;
+    .table-dark {
+        background-color: transparent;
         color: #fff;
-        border-collapse: collapse;
     }
 
-        .custom-table th {
+        .table-dark th {
+            border-bottom: 2px solid #333;
             color: #888;
             font-weight: 600;
             text-transform: uppercase;
-            font-size: 12px;
-            padding: 15px;
-            border-bottom: 1px solid #333;
-            text-align: left;
+            font-size: 13px;
+            padding-bottom: 15px;
         }
 
-        .custom-table td {
-            padding: 15px;
-            border-bottom: 1px solid #1a1a1a;
+        .table-dark td {
+            border-bottom: 1px solid #222;
             vertical-align: middle;
-            font-size: 15px;
+            padding: 15px 10px;
         }
 
-        .custom-table tbody tr {
-            transition: background 0.2s ease;
+        .table-dark tbody tr:hover {
+            background-color: rgba(255,255,255,0.02);
         }
-
-            .custom-table tbody tr:hover {
-                background: rgba(255, 255, 255, 0.02);
-            }
 </style>
 
-<div class="container mt-4">
-    <h2 class="fw-bold mb-4" style="color: #fff;">📊 Дэшборд</h2>
+<div class="dashboard-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white fw-bold m-0">📈 Дашборд продюсера</h2>
+        <a href="/Admin/Create" class="btn fw-bold" style="background: #1db954; color: #000; border-radius: 8px;">+ Загрузить бит</a>
+    </div>
 
-    <div class="row g-4 mb-5">
-
-        <div class="col-md-4">
-            <div class="stat-card" style="border-color: rgba(29, 185, 84, 0.3);">
-                <div class="glow-bg"></div>
-                <div class="stat-icon">💰</div>
-                <div class="stat-title">Общий доход</div>
-                <div class="stat-value" style="color: #1db954;">$@Model.TotalRevenue</div>
-            </div>
-        </div>
-
+    <div class="row g-4">
         <div class="col-md-4">
             <div class="stat-card">
-                <div class="stat-icon">📦</div>
-                <div class="stat-title">Всего продаж</div>
+                <div class="stat-title">Общая выручка</div>
+                <div class="stat-value money">$@Model.TotalRevenue.ToString("0.00")</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-title">Продано битов</div>
                 <div class="stat-value">@Model.TotalSales</div>
             </div>
         </div>
-
         <div class="col-md-4">
             <div class="stat-card">
-                <div class="stat-icon">🔥</div>
-                <div class="stat-title">Самый продаваемый бит</div>
-                <div class="stat-value" style="font-size: 24px; margin-top: auto;">@Model.TopBeatTitle</div>
-                <div class="text-secondary small mt-1">@Model.TopBeatSales продаж</div>
+                <div class="stat-title">Хит продаж</div>
+                @if (!string.IsNullOrEmpty(Model.TopBeatTitle))
+                {
+                    <div class="stat-value fire">🔥 @Model.TopBeatTitle</div>
+                    <div style="color: #888; font-size: 13px; margin-top: 5px;">Продаж: @Model.TopBeatSales</div>
+                }
+                else
+                {
+                    <div class="stat-value" style="color: #666; font-size: 20px;">Пока нет продаж</div>
+                }
             </div>
         </div>
-
     </div>
 
-    <div class="table-container mb-5">
-        <h4 class="fw-bold mb-4" style="color: #fff;">📈 Динамика продаж</h4>
-        <div style="height: 300px; width: 100%;">
-            <canvas id="salesChart"></canvas>
-        </div>
+    <div class="chart-container shadow-sm">
+        <h4 class="text-white mb-4 fw-bold">Динамика продаж по дням</h4>
+        <canvas id="salesChart" height="100"></canvas>
     </div>
 
-    <div class="table-container">
-        <h4 class="fw-bold mb-4" style="color: #fff;">🏆 Статистика по битам</h4>
-
-        <div class="table-responsive">
-            <table class="custom-table">
+    <div class="table-container shadow-sm">
+        <h4 class="text-white mb-4 fw-bold">Детализация по трекам</h4>
+        @if (Model.Beats != null && Model.Beats.Any())
+        {
+            <table class="table table-dark table-borderless mb-0">
                 <thead>
                     <tr>
                         <th>Название бита</th>
-                        <th style="text-align: center;">Количество продаж</th>
-                        <th style="text-align: right;">Суммарный доход</th>
+                        <th class="text-center">Количество продаж</th>
+                        <th class="text-end">Принес выручки</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var beat in Model.Beats)
+                    @foreach (var beat in Model.Beats.OrderByDescending(b => b.SalesCount))
                     {
                         <tr>
-                            <td class="fw-bold">@beat.Title</td>
-                            <td style="text-align: center;">
-                                <span class="badge" style="background: #222; color: #fff; padding: 6px 12px; border-radius: 6px;">
-                                    @beat.SalesCount
-                                </span>
+                            <td class="fw-bold" style="font-size: 15px;">@beat.Title</td>
+                            <td class="text-center">
+                                @if (beat.SalesCount > 0)
+                                {
+                                    <span class="badge" style="background: rgba(29, 185, 84, 0.2); color: #1db954; font-size: 14px;">@beat.SalesCount шт.</span>
+                                }
+                                else
+                                {
+                                    <span class="text-secondary">-</span>
+                                }
                             </td>
-                            <td style="text-align: right; color: #1db954; font-weight: bold;">
-                                $@beat.Revenue
-                            </td>
+                            <td class="text-end fw-bold" style="color: #1db954;">$@beat.Revenue.ToString("0.00")</td>
                         </tr>
                     }
                 </tbody>
             </table>
-        </div>
+        }
+        else
+        {
+            <div class="text-center py-4 text-secondary">
+                Нет данных для отображения.
+            </div>
+        }
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const labels = [
-        @foreach (var item in Model.SalesByDay)
-        {
-                @: "@item.Date.ToString("dd.MM")",
-        }
-    ];
+    document.addEventListener("DOMContentLoaded", function () {
 
-    const data = [
-        @foreach (var item in Model.SalesByDay)
-        {
-                @: @item.Count,
-        }
-    ];
+        // 1. Достаем данные из C# и превращаем их в JSON для JavaScript
+        const chartLabels = @Html.Raw(Json.Serialize(Model.SalesByDay.Select(s => s.Date.ToString("dd.MM.yyyy"))));
+        const chartData = @Html.Raw(Json.Serialize(Model.SalesByDay.Select(s => s.Count)));
 
-    const ctx = document.getElementById('salesChart').getContext('2d');
+        // 2. Ищем элемент <canvas>
+        const ctx = document.getElementById('salesChart').getContext('2d');
 
-    // Создаем неоновый градиент для графика
-    let gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, 'rgba(29, 185, 84, 0.4)'); // Яркий зеленый сверху
-    gradient.addColorStop(1, 'rgba(29, 185, 84, 0.0)'); // Прозрачный снизу
+        // 3. Создаем красивый градиент под линией графика
+        let gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(29, 185, 84, 0.5)'); // Ярко-зеленый сверху
+        gradient.addColorStop(1, 'rgba(29, 185, 84, 0.0)'); // Прозрачный снизу
 
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Продажи',
-                data: data,
-                borderColor: '#1db954',       // Цвет линии
-                backgroundColor: gradient,    // Заливка под линией
-                borderWidth: 3,
-                pointBackgroundColor: '#fff',
-                pointBorderColor: '#1db954',
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                fill: true,
-                tension: 0.4                  // Плавные изгибы линии
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false // Скрываем легенду, она тут не нужна
-                },
-                tooltip: {
-                    backgroundColor: '#111',
-                    titleColor: '#888',
-                    bodyColor: '#fff',
-                    borderColor: '#333',
-                    borderWidth: 1,
-                    padding: 10,
-                    displayColors: false
-                }
+        // 4. Инициализируем Chart.js
+        new Chart(ctx, {
+            type: 'line', // Тип графика - линия
+            data: {
+                labels: chartLabels, // Даты внизу
+                datasets: [{
+                    label: 'Количество продаж',
+                    data: chartData, // Сами цифры
+                    borderColor: '#1db954', // Цвет линии (Spotify Green)
+                    backgroundColor: gradient, // Заливка под линией
+                    borderWidth: 3,
+                    pointBackgroundColor: '#141414',
+                    pointBorderColor: '#1db954',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    fill: true, // Включаем заливку
+                    tension: 0.4 // Делаем линию плавной (изгибающейся)
+                }]
             },
-            scales: {
-                x: {
-                    grid: {
-                        color: '#222',        // Темная сетка
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: '#888'         // Серый текст оси
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }, // Прячем скучную легенду
+                    tooltip: {
+                        backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                        titleColor: '#888',
+                        bodyColor: '#fff',
+                        bodyFont: { weight: 'bold', size: 14 },
+                        padding: 12,
+                        borderColor: '#333',
+                        borderWidth: 1,
+                        displayColors: false
                     }
                 },
-                y: {
-                    grid: {
-                        color: '#222',        // Темная сетка
-                        drawBorder: false
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+                        ticks: { color: '#888' }
                     },
-                    ticks: {
-                        color: '#888',        // Серый текст оси
-                        stepSize: 1,          // Продажи идут поштучно
-                        beginAtZero: true
+                    y: {
+                        beginAtZero: true, // Начинаем график с нуля
+                        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+                        ticks: {
+                            color: '#888',
+                            stepSize: 1 // Шаг сетки (чтобы не было 1.5 продажи)
+                        }
                     }
                 }
             }
-        }
+        });
     });
 </script>

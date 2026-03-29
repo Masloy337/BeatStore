@@ -1,5 +1,4 @@
-﻿@using BeatStore.Models
-@model List<BeatStore.Models.Beat>
+﻿@model BeatStore.ViewModels.BeatsIndexViewModel
 
 @{
     ViewData["Title"] = "Beats";
@@ -419,38 +418,35 @@
         <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
             <div class="search-input-group shadow-sm">
                 <span class="search-icon">🔍</span>
-                <input type="text" name="searchString" value="@ViewBag.CurrentSearch" class="search-input" placeholder="Поиск по названию или продюсеру..." />
-                <input type="hidden" name="genre" value="@ViewBag.CurrentGenre" />
+                <input type="text" name="searchString" value="@Model.CurrentSearch" class="search-input" placeholder="Поиск по названию или продюсеру..." />
+                <input type="hidden" name="genre" value="@Model.CurrentGenre" />
                 <button type="submit" class="search-btn">Искать</button>
             </div>
-            @if (!string.IsNullOrEmpty(ViewBag.CurrentSearch) || !string.IsNullOrEmpty(ViewBag.CurrentGenre))
+            @if (!string.IsNullOrEmpty(Model.CurrentSearch) || !string.IsNullOrEmpty(Model.CurrentGenre))
             {
                 <a href="/Beats" class="clear-btn shadow-sm">✖ Сбросить всё</a>
             }
         </div>
         <div class="genre-filters">
             <span class="text-secondary small fw-bold me-2">ЖАНРЫ:</span>
-            <a href="/Beats?searchString=@ViewBag.CurrentSearch" class="filter-badge @(string.IsNullOrEmpty(ViewBag.CurrentGenre) ? "active" : "")">Все жанры</a>
-            @if (ViewBag.Genres != null)
+            <a href="/Beats?searchString=@Model.CurrentSearch" class="filter-badge @(string.IsNullOrEmpty(Model.CurrentGenre) ? "active" : "")">Все жанры</a>
+            @if (Model.Genres != null && Model.Genres.Any())
             {
-                foreach (string g in ViewBag.Genres)
+                foreach (string g in Model.Genres)
                 {
-                    <a href="/Beats?genre=@g&searchString=@ViewBag.CurrentSearch" class="filter-badge @(ViewBag.CurrentGenre == g ? "active" : "")">@g</a>
+                    <a href="/Beats?genre=@g&searchString=@Model.CurrentSearch" class="filter-badge @(Model.CurrentGenre == g ? "active" : "")">@g</a>
                 }
             }
         </div>
     </form>
 </div>
 
-@if (ViewBag.TopBeats != null && string.IsNullOrEmpty(ViewBag.CurrentSearch) && string.IsNullOrEmpty(ViewBag.CurrentGenre))
+@if (Model.TopBeats != null && Model.TopBeats.Any() && string.IsNullOrEmpty(Model.CurrentSearch) && string.IsNullOrEmpty(Model.CurrentGenre))
 {
     <h2 class="mb-4 fw-bold" style="color: #fff;">🔥 Топ биты</h2>
     <div class="beat-grid">
-        @foreach (var dynamicBeat in ViewBag.TopBeats)
+        @foreach (var beat in Model.TopBeats)
         {
-            var beat = (BeatStore.Models.Beat)dynamicBeat;
-
-            // Дальше весь твой код заработает сам собой, так как переменная beat теперь определена
             var fileName = System.IO.Path.GetFileName(beat.DemoAudioPath);
             var demoSrc = "/File/Demo?fileName=" + fileName;
             var producer = string.IsNullOrEmpty(beat.ProducerName) ? "unknown" : beat.ProducerName;
@@ -496,10 +492,10 @@
 }
 
 <h2 class="mb-4 fw-bold" style="color: #fff;">
-    @(string.IsNullOrEmpty(ViewBag.CurrentSearch) && string.IsNullOrEmpty(ViewBag.CurrentGenre) ? "🎧 Все биты" : "🎧 Результаты поиска")
+    @(string.IsNullOrEmpty(Model.CurrentSearch) && string.IsNullOrEmpty(Model.CurrentGenre) ? "🎧 Все биты" : "🎧 Результаты поиска")
 </h2>
 
-@if (!Model.Any())
+@if (!Model.Beats.Any())
 {
     <div class="text-center p-5 shadow-lg" style="background: #141414; border-radius: 16px; border: 1px dashed #333;">
         <h1 style="font-size: 50px; margin-bottom: 15px;">🔍</h1>
@@ -511,7 +507,7 @@
 else
 {
     <div class="beat-list">
-        @foreach (var beat in Model)
+        @foreach (var beat in Model.Beats)
         {
             var fileName = System.IO.Path.GetFileName(beat.DemoAudioPath);
             var demoSrc = "/File/Demo?fileName=" + fileName;
@@ -591,7 +587,6 @@ else
 </div>
 
 <script>
-    // 🔥 ИСПРАВЛЕНИЕ: Обновленная функция лайков (с тостерами и правильным контроллером)
     async function toggleLike(beatId, btn) {
         try {
             let res = await fetch('/Profile/ToggleFavorite?beatId=' + beatId, { method: 'POST' });
@@ -682,25 +677,25 @@ else
         return `✔ Полные коммерческие права<br>✔ Без лимитов на стримы и копии<br>✔ Бит удаляется из магазина после покупки<br>🎧 Формат: MP3 + WAV + Trackouts`;
     }
 
-    // Находим все кнопки Play на странице
-    document.querySelectorAll('.play-btn').forEach(btn => {
-        btn.onclick = (e) => {
-            // Предотвращаем срабатывание других кликов
-            e.stopPropagation();
-            e.preventDefault();
+    // 🔥 ОБНОВЛЕННАЯ ЛОГИКА ПЛЕЕРА ДЛЯ TURBO (Делегирование)
+    document.addEventListener('click', function(e) {
+        // Ищем, был ли клик по кнопке с классом play-btn или по её внутренностям (например, по иконке)
+        const btn = e.target.closest('.play-btn');
 
-            // Достаем данные из атрибутов кнопки
+        if (btn) {
+            e.preventDefault();
+            e.stopPropagation();
+
             const src = btn.getAttribute('data-audio');
             const title = btn.getAttribute('data-title');
             const producer = btn.getAttribute('data-producer');
             const cover = btn.getAttribute('data-cover');
 
-            // Вызываем наш глобальный плеер!
             if (typeof window.playGlobalTrack === 'function') {
                 window.playGlobalTrack(src, title, producer, cover);
             } else {
                 console.error("Глобальный плеер не найден. Убедитесь, что код плеера добавлен в _Layout.cshtml");
             }
-        };
+        }
     });
 </script>

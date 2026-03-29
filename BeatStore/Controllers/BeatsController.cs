@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using BeatStore.Data;
+﻿using BeatStore.Data;
+using BeatStore.Models;
+using BeatStore.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using BeatStore.Models;
 
 namespace BeatStore.Controllers
 {
@@ -16,32 +18,41 @@ namespace BeatStore.Controllers
         }
 
         // 🔥 Обновленный метод Index с поиском и фильтрами
+        // Не забудь добавить этот using в самом верху контроллера:
+        // using BeatStore.ViewModels;
+
+        [HttpGet]
         public async Task<IActionResult> Index(string searchString, string genre)
         {
-            // 1. Получаем уникальные жанры из базы данных для кнопок-фильтров
-            var genres = await _context.Beats
+            // 1. Создаем нашу пустую "коробку"
+            var viewModel = new BeatsIndexViewModel
+            {
+                CurrentSearch = searchString,
+                CurrentGenre = genre
+            };
+
+            // 2. Кладем туда Жанры
+            viewModel.Genres = await _context.Beats
                 .Where(b => !string.IsNullOrEmpty(b.Genre))
                 .Select(b => b.Genre)
                 .Distinct()
+                .AsNoTracking()
                 .ToListAsync();
 
-            ViewBag.Genres = genres;
-            ViewBag.CurrentGenre = genre;
-            ViewBag.CurrentSearch = searchString;
-
-            // 2. Получаем ТОП-биты (например, 4 самых прослушиваемых)
-            ViewBag.TopBeats = await _context.Beats
+            // 3. Кладем туда ТОП-биты
+            viewModel.TopBeats = await _context.Beats
                 .Include(b => b.Likes)
                 .OrderByDescending(b => b.PlayCount)
                 .Take(4)
+                .AsNoTracking()
                 .ToListAsync();
 
-            // 3. Базовый запрос для списка ВСЕХ битов
+            // 4. Собираем основной запрос
             var beatsQuery = _context.Beats
                 .Include(b => b.Likes)
+                .AsNoTracking()
                 .AsQueryable();
 
-            // 🔥 ФИЛЬТР 1: Поиск по названию, продюсеру, ЖАНРУ и ТЕГАМ!
             if (!string.IsNullOrEmpty(searchString))
             {
                 beatsQuery = beatsQuery.Where(b =>
@@ -52,22 +63,25 @@ namespace BeatStore.Controllers
                 );
             }
 
-            // 🔥 ФИЛЬТР 2: По клику на кнопку жанра
             if (!string.IsNullOrEmpty(genre))
             {
                 beatsQuery = beatsQuery.Where(b => b.Genre == genre);
             }
 
-            // Выполняем запрос и отправляем отфильтрованные биты на страницу
-            var beats = await beatsQuery.ToListAsync();
-            return View(beats);
+            // 5. Кладем отфильтрованные биты в модель
+            viewModel.Beats = await beatsQuery.ToListAsync();
+
+            // 6. Отправляем ОДНУ коробку на страницу вместо кучи ViewBag
+            return View(viewModel);
         }
 
         // 🔥 ОБНОВЛЕННЫЙ BUY (поддержка лицензий)
         [HttpPost]
+        [Authorize] // 🔒 Защита: только для авторизованных
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Buy(int id, int? licenseId)
         {
+            // ⚠️ Здесь мы меняем данные (IsSold), поэтому AsNoTracking НЕ используем
             var beat = await _context.Beats
                 .Include(b => b.Licenses)
                 .FirstOrDefaultAsync(b => b.Id == id);
@@ -80,12 +94,8 @@ namespace BeatStore.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            if (userId == null)
-                return Unauthorized();
-
             License? license = null;
 
-            // 🔥 если передали лицензию — используем её
             if (licenseId.HasValue)
             {
                 license = beat.Licenses?.FirstOrDefault(x => x.Id == licenseId.Value);
@@ -94,26 +104,25 @@ namespace BeatStore.Controllers
                     return BadRequest("Лицензия не найдена");
             }
 
-            // 🔥 СОЗДАЕМ ЗАКАЗ
+            // 🔥 СОЗДАЕМ ЗАКАЗ (ИСПРАВЛЕНИЕ: ДОБАВЛЕНА ЦЕНА)
             var order = new Order
             {
                 UserId = userId,
                 BeatId = beat.Id,
-                LicenseId = license?.Id, // 🔥 НОВОЕ
+                LicenseId = license?.Id,
+                Price = license != null ? license.Price : beat.Price, // 🔥 Фиксируем цену покупки!
                 CreatedAt = DateTime.Now
             };
 
             _context.Orders.Add(order);
 
-            // 🔥 ВАЖНО
-            // если Exclusive — продаём полностью
+            // Если Exclusive — продаём полностью
             if (license != null && license.Name == "Exclusive")
             {
                 beat.IsSold = true;
             }
-
-            // 🔥 если лицензии нет (старый способ) — оставляем старую логику
-            if (license == null)
+            // Если лицензии нет (старый способ)
+            else if (license == null)
             {
                 beat.IsSold = true;
             }
@@ -122,39 +131,47 @@ namespace BeatStore.Controllers
 
             return RedirectToAction("Index");
         }
+
+        // 🔥 УВЕЛИЧЕНИЕ ПРОСЛУШИВАНИЙ
         [HttpPost]
         public async Task<IActionResult> AddPlay(int id)
         {
+            // ⚠️ Изменяем PlayCount, AsNoTracking НЕ используем
             var beat = await _context.Beats.FindAsync(id);
 
             if (beat == null)
                 return NotFound();
 
             beat.PlayCount++;
-
             await _context.SaveChangesAsync();
 
             return Ok();
         }
+
+        // 🔥 ПОЛУЧЕНИЕ ЛИЦЕНЗИЙ ДЛЯ МОДАЛКИ
         [HttpGet]
-        public IActionResult GetLicenses(int beatId)
+        public async Task<IActionResult> GetLicenses(int beatId) // 🚀 ИСПРАВЛЕНИЕ: Сделали асинхронным
         {
-            var licenses = _context.Licenses
+            var licenses = await _context.Licenses
                 .Where(l => l.BeatId == beatId)
                 .Select(l => new {
                     l.Id,
                     l.Name,
                     l.Price
                 })
-                .ToList();
+                .AsNoTracking() // 🚀 Оптимизация
+                .ToListAsync();
 
             return Json(licenses);
         }
+
         // GET: /Beats/Details/5
+        [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
             var beat = await _context.Beats
                 .Include(b => b.Licenses)
+                .AsNoTracking() // 🚀 Оптимизация
                 .FirstOrDefaultAsync(m => m.Id == id);
 
             if (beat == null) return NotFound();

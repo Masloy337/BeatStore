@@ -1,0 +1,146 @@
+﻿@model BeatStore.Models.Beat
+@{
+    ViewData["Title"] = "Редактирование бита";
+}
+
+<style>
+    /* Используем те же стили, что и в Create.cshtml */
+    .admin-container {
+        max-width: 900px;
+        margin: 0 auto;
+        background: #141414;
+        padding: 40px;
+        border-radius: 16px;
+        border: 1px solid #222;
+    }
+
+    .form-control {
+        background: #0a0a0a;
+        border: 1px solid #333;
+        color: #fff;
+        padding: 10px 15px;
+        border-radius: 8px;
+    }
+
+    label {
+        color: #aaa;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+
+    .current-file-info {
+        font-size: 12px;
+        color: #1db954;
+        margin-top: 5px;
+    }
+</style>
+
+<div class="admin-container shadow-lg mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white fw-bold m-0">✏️ Редактировать: @Model.Title</h2>
+        <a href="/Admin/List" class="btn btn-outline-secondary btn-sm rounded-pill">Назад к списку</a>
+    </div>
+
+    <form id="editForm">
+        <input type="hidden" name="Id" value="@Model.Id" />
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label>Название</label>
+                <input type="text" name="Title" class="form-control" value="@Model.Title" required />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Продюсер</label>
+                <input type="text" name="ProducerName" class="form-control" value="@Model.ProducerName" required />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label>Жанр</label>
+                <input type="text" name="Genre" class="form-control" value="@Model.Genre" required />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label>BPM</label>
+                <input type="number" name="Bpm" class="form-control" value="@Model.Bpm" required />
+            </div>
+            <div class="col-md-4 mb-3">
+                <label>Теги</label>
+                <input type="text" name="Tags" class="form-control" value="@Model.Tags" />
+            </div>
+        </div>
+
+        <h5 class="text-white mt-4 mb-3" style="border-bottom: 1px solid #333; padding-bottom: 10px;">Цены лицензий ($)</h5>
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label>Витрина</label>
+                <input type="number" name="Price" class="form-control" value="@Model.Price" required />
+            </div>
+            @foreach (var lic in Model.Licenses.OrderBy(x => x.Id))
+            {
+                <div class="col-md-3 mb-3">
+                    <label>@lic.Name Price</label>
+                    <input type="number" name="@(lic.Name)Price" class="form-control" value="@lic.Price" required />
+                </div>
+            }
+        </div>
+
+        <h5 class="text-white mt-4 mb-3" style="border-bottom: 1px solid #333; padding-bottom: 10px;">Файлы (Оставьте пустыми, если не хотите менять)</h5>
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <label>🖼️ Обложка</label>
+                <input type="file" name="imageFile" class="form-control" accept="image/*" />
+                <div class="current-file-info">Текущая: @System.IO.Path.GetFileName(Model.CoverImagePath)</div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <label>📢 Демо (MP3)</label>
+                <input type="file" name="demoFile" class="form-control" accept=".mp3" />
+                <div class="current-file-info">Текущая: @Model.DemoAudioPath</div>
+            </div>
+        </div>
+
+        <button type="submit" id="saveBtn" class="btn w-100 fw-bold mt-3" style="background: #1db954; color: #000; padding: 14px;">
+            💾 Сохранить изменения
+        </button>
+
+        <div id="progressBox" class="mt-4" style="display:none;">
+            <div style="height:8px; background:#222; border-radius:4px; overflow:hidden;">
+                <div id="pBar" style="height:100%; width:0%; background:#1db954; transition:0.2s;"></div>
+            </div>
+            <div id="pText" class="text-center text-white small mt-2">Загрузка...</div>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.getElementById('editForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('saveBtn');
+        const pBox = document.getElementById('progressBox');
+        const pBar = document.getElementById('pBar');
+
+        btn.disabled = true;
+        pBox.style.display = 'block';
+
+        const formData = new FormData(this);
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/Admin/EditBeatAjax', true);
+
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+                const pct = Math.round((e.loaded / e.total) * 100);
+                pBar.style.width = pct + '%';
+                document.getElementById('pText').innerText = `Обновление: ${pct}%`;
+            }
+        };
+
+        xhr.onload = () => {
+            if (xhr.status === 200) {
+                window.location.href = '/Admin/List';
+            } else {
+                alert("Ошибка при сохранении!");
+                btn.disabled = false;
+            }
+        };
+        xhr.send(formData);
+    });
+</script>

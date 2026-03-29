@@ -22,6 +22,8 @@
     <title>BeatStore - Premium Beats</title>
 
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <script src="https://cdn.jsdelivr.net/npm/@@hotwired/turbo@8.0.4/dist/turbo.es2017-umd.js"></script>
     <style>
         /* --- БАЗОВЫЕ СТИЛИ --- */
         body {
@@ -452,7 +454,7 @@
             @if (User.Identity.IsAuthenticated)
             {
                 <span class="user-name">@User.Identity.Name</span>
-                <form asp-area="Identity" asp-page="/Account/Logout" method="post" style="display:inline;">
+                <form asp-area="Identity" asp-page="/Account/Logout" method="post" style="display:inline;" data-turbo="false">
                     <button type="submit" class="action-btn" style="background: transparent; color: #fff; border: 1px solid #444;">Выйти</button>
                 </form>
             }
@@ -468,244 +470,262 @@
         @RenderBody()
     </div>
 
-    <div id="global-player" class="global-player" style="transform: translateY(150%);">
+    <div id="turbo-permanent-wrapper" data-turbo-permanent="true">
 
-        <div class="gp-progress-container">
-            <div id="gp-progress-fill" class="gp-progress-fill"></div>
-            <input type="range" id="gp-progress" class="gp-progress-bar" value="0" min="0" max="100" step="0.1" />
-        </div>
+        <div id="global-player" class="global-player" style="transform: translateY(150%);">
 
-        <div class="gp-left">
-            <img id="gp-cover" src="/images/no-image.png" alt="Cover" />
-            <div class="gp-info">
-                <div class="gp-title-row">
-                    <div id="gp-title" class="gp-title">Название трека</div>
-                    <div id="gp-tags" class="gp-tags"></div>
+            <audio id="global-audio-element" src=""></audio>
+
+            <div class="gp-progress-container">
+                <div id="gp-progress-fill" class="gp-progress-fill"></div>
+                <input type="range" id="gp-progress" class="gp-progress-bar" value="0" min="0" max="100" step="0.1" />
+            </div>
+
+            <div class="gp-left">
+                <img id="gp-cover" src="/images/no-image.png" alt="Cover" />
+                <div class="gp-info">
+                    <div class="gp-title-row">
+                        <div id="gp-title" class="gp-title">Название трека</div>
+                       
+                    </div>
+                    <div id="gp-producer" class="gp-producer">Продюсер</div>
                 </div>
-                <div id="gp-producer" class="gp-producer">Продюсер</div>
+            </div>
+
+            <div class="gp-controls">
+                <button id="gp-repeat-btn" class="gp-icon-btn gp-repeat-btn" title="Повтор" onclick="window.toggleRepeat()">
+                    <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" /></svg>
+                </button>
+
+                <button class="gp-icon-btn" title="Назад" onclick="window.prevTrack()">
+                    <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>
+                </button>
+
+                <button id="gp-play-btn" class="gp-play-icon">
+                    <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                </button>
+
+                <button class="gp-icon-btn" title="Вперед" onclick="window.nextTrack()">
+                    <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
+                </button>
+
+                <div class="gp-time-display">
+                    <span id="gp-current-time">0:00</span>
+                    <span style="color: #444; margin: 0 4px;">/</span>
+                    <span id="gp-duration">0:00</span>
+                </div>
+
+                <div class="gp-volume-container">
+                    <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" /></svg>
+                    <input type="range" id="gp-volume" class="gp-volume-slider" min="0" max="1" step="0.01" value="0.5" />
+                </div>
+            </div>
+
+            <div class="gp-right">
+                <button class="gp-icon-btn" title="Поделиться" onclick="window.shareTrack()">
+                    <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" /></svg>
+                </button>
+
+                <button class="gp-cart-btn" onclick="window.openPlayerCart()">
+                    <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" /></svg>
+                    <span id="gp-price">$0</span>
+                </button>
+
+                <button id="gp-close-btn" class="gp-icon-btn" title="Закрыть плеер">
+                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /></svg>
+                </button>
             </div>
         </div>
 
-        <div class="gp-controls">
-            <button id="gp-repeat-btn" class="gp-icon-btn gp-repeat-btn" title="Повтор" onclick="toggleRepeat()">
-                <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" /></svg>
-            </button>
+        <div id="toast-container" style="position: fixed; bottom: 100px; right: 20px; z-index: 1060; display: flex; flex-direction: column; gap: 10px;"></div>
 
-            <button class="gp-icon-btn" title="Назад" onclick="prevTrack()">
-                <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>
-            </button>
+        <script>
+            // 🔥 1. Привязываем переменные к window
+            window.audioPlayer = window.audioPlayer || document.getElementById('global-audio-element');
+            window.playerQueue = window.playerQueue || [];
+            window.currentIndex = window.currentIndex !== undefined ? window.currentIndex : -1;
+            window.currentPlayingId = window.currentPlayingId || null;
 
-            <button id="gp-play-btn" class="gp-play-icon">
-                <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-            </button>
+            window.svgPlay = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+            window.svgPause = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
 
-            <button class="gp-icon-btn" title="Вперед" onclick="nextTrack()">
-                <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
-            </button>
+            // 🔥 2. Глобальная функция уведомлений
+            window.showToast = function(title, message, icon = '🛒') {
+                let container = document.getElementById('toast-container');
+                if (!container) return;
+                let toast = document.createElement('div');
+                toast.className = 'premium-toast';
+                toast.innerHTML = `<div class="toast-icon">${icon}</div><div><div class="toast-title">${title}</div><div class="toast-body">${message}</div></div>`;
+                container.appendChild(toast);
+                setTimeout(() => toast.classList.add('show'), 10);
+                setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
+            };
 
-            <div class="gp-time-display">
-                <span id="gp-current-time">0:00</span>
-                <span style="color: #444; margin: 0 4px;">/</span>
-                <span id="gp-duration">0:00</span>
-            </div>
+            // 🔥 3. Функции плеера
+            window.buildQueue = function() {
+                window.playerQueue = [];
+                document.querySelectorAll('.play-btn').forEach(btn => {
+                    let card = btn.closest('.beat-card') || btn.closest('.beat-row') || btn.closest('.library-row');
+                    let tagsHtml = ''; let priceText = '$0';
 
-            <div class="gp-volume-container">
-                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" /></svg>
-                <input type="range" id="gp-volume" class="gp-volume-slider" min="0" max="1" step="0.01" value="0.5" />
-            </div>
-        </div>
-
-        <div class="gp-right">
-            <button class="gp-icon-btn" title="Поделиться" onclick="shareTrack()">
-                <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" /></svg>
-            </button>
-
-            <button class="gp-cart-btn" onclick="openPlayerCart()">
-                <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" /></svg>
-                <span id="gp-price">$0</span>
-            </button>
-
-            <button id="gp-close-btn" class="gp-icon-btn" title="Закрыть плеер">
-                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /></svg>
-            </button>
-        </div>
-    </div>
-
-    <div id="toast-container" style="position: fixed; bottom: 100px; right: 20px; z-index: 1060; display: flex; flex-direction: column; gap: 10px;"></div>
-
-    <script>
-        function showToast(title, message, icon = '🛒') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = 'premium-toast';
-            toast.innerHTML = `<div class="toast-icon">${icon}</div><div><div class="toast-title">${title}</div><div class="toast-body">${message}</div></div>`;
-            container.appendChild(toast);
-            setTimeout(() => toast.classList.add('show'), 10);
-            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
-        }
-
-        const audioPlayer = new Audio();
-        const globalPlayerUI = document.getElementById('global-player');
-        const playBtn = document.getElementById('gp-play-btn');
-        const progressBar = document.getElementById('gp-progress');
-        const progressFill = document.getElementById('gp-progress-fill');
-        const volumeSlider = document.getElementById('gp-volume');
-        const currentTimeEl = document.getElementById('gp-current-time');
-        const durationEl = document.getElementById('gp-duration');
-
-        const svgPlay = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
-        const svgPause = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-
-        let queue = [];
-        let currentIndex = -1;
-        window.currentPlayingId = null;
-
-        function buildQueue() {
-            queue = [];
-            document.querySelectorAll('.play-btn').forEach(btn => {
-                let card = btn.closest('.beat-card') || btn.closest('.beat-row') || btn.closest('.library-row');
-                let tagsHtml = ''; let priceText = '$0';
-
-                if (card) {
-                    let tagsContainer = card.querySelector('.tags-container');
-                    if (tagsContainer) tagsHtml = tagsContainer.innerHTML;
-                    let priceBtn = card.querySelector('.price-btn');
-                    if (priceBtn && !priceBtn.classList.contains('sold')) priceText = priceBtn.innerText;
-                }
-
-                queue.push({
-                    id: btn.getAttribute('data-id'), src: btn.getAttribute('data-audio'),
-                    title: btn.getAttribute('data-title'), producer: btn.getAttribute('data-producer'),
-                    cover: btn.getAttribute('data-cover'), tags: tagsHtml, price: priceText, btn: btn
-                });
-            });
-        }
-
-        audioPlayer.volume = volumeSlider.value;
-        volumeSlider.addEventListener('input', (e) => audioPlayer.volume = e.target.value);
-
-        function formatTime(seconds) {
-            if (isNaN(seconds)) return "0:00";
-            const m = Math.floor(seconds / 60); const s = Math.floor(seconds % 60);
-            return `${m}:${s < 10 ? '0' : ''}${s}`;
-        }
-
-        window.playGlobalTrack = function(src, title, producer, cover) {
-            buildQueue();
-            const index = queue.findIndex(t => t.src === src);
-            if (index !== -1) playTrack(index);
-        };
-
-        function playTrack(index) {
-            if (index < 0 || index >= queue.length) return;
-            const track = queue[index];
-
-            if (currentIndex === index && audioPlayer.src.includes(track.src)) {
-                if (audioPlayer.paused) audioPlayer.play(); else audioPlayer.pause();
-                return;
-            }
-
-            currentIndex = index;
-            audioPlayer.src = track.src;
-            window.currentPlayingId = track.id;
-            audioPlayer.play();
-
-            document.getElementById('gp-title').innerText = track.title;
-            document.getElementById('gp-producer').innerText = track.producer;
-            document.getElementById('gp-cover').src = track.cover;
-            document.getElementById('gp-tags').innerHTML = track.tags;
-            document.getElementById('gp-price').innerText = track.price;
-
-            globalPlayerUI.classList.add('show');
-            document.querySelectorAll('.play-btn').forEach(btn => btn.innerHTML = '▶');
-            track.btn.innerHTML = '⏸';
-        }
-
-        function nextTrack() { if (currentIndex + 1 < queue.length) playTrack(currentIndex + 1); }
-        function prevTrack() { if (currentIndex - 1 >= 0) playTrack(currentIndex - 1); }
-
-        function openPlayerCart() {
-            if (typeof openModal === 'function' && window.currentPlayingId) openModal(window.currentPlayingId);
-            else showToast('Внимание', 'Этот трек уже куплен или не продается', '⚠️');
-        }
-
-        function shareTrack() {
-            if (!audioPlayer.src) return;
-            const url = window.location.origin + "/Beats?searchString=" + encodeURIComponent(document.getElementById('gp-title').innerText);
-            navigator.clipboard.writeText(url).then(() => showToast('Скопировано', 'Ссылка на трек скопирована в буфер', '🔗'));
-        }
-
-        function toggleRepeat() {
-            audioPlayer.loop = !audioPlayer.loop;
-            const repeatBtn = document.getElementById('gp-repeat-btn');
-            if (audioPlayer.loop) {
-                repeatBtn.classList.add('active');
-                showToast('Повтор', 'Включен повтор трека', '🔁');
-            } else {
-                repeatBtn.classList.remove('active');
-            }
-        }
-
-        playBtn.onclick = () => { if (audioPlayer.paused) audioPlayer.play(); else audioPlayer.pause(); };
-
-        document.getElementById('gp-close-btn').onclick = () => {
-            audioPlayer.pause(); globalPlayerUI.classList.remove('show');
-            document.querySelectorAll('.play-btn').forEach(btn => btn.innerHTML = '▶');
-        };
-
-        audioPlayer.addEventListener('play', () => {
-            playBtn.innerHTML = svgPause;
-            if (currentIndex !== -1 && queue[currentIndex]) queue[currentIndex].btn.innerHTML = '⏸';
-        });
-
-        audioPlayer.addEventListener('pause', () => {
-            playBtn.innerHTML = svgPlay;
-            if (currentIndex !== -1 && queue[currentIndex]) queue[currentIndex].btn.innerHTML = '▶';
-        });
-
-        audioPlayer.addEventListener('ended', nextTrack);
-
-        audioPlayer.addEventListener('timeupdate', () => {
-            currentTimeEl.innerText = formatTime(audioPlayer.currentTime);
-            if (audioPlayer.duration) {
-                const percent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
-                progressBar.value = percent;
-                progressFill.style.width = percent + '%';
-            }
-        });
-
-        audioPlayer.addEventListener('loadedmetadata', () => durationEl.innerText = formatTime(audioPlayer.duration));
-        progressBar.addEventListener('input', (e) => audioPlayer.currentTime = (e.target.value / 100) * audioPlayer.duration);
-        
-        // 🔥 ЛОГИКА ЛАЙКОВ (ИЗБРАННОЕ)
-        function toggleFavorite(beatId, btnElement) {
-            fetch(`/Profile/ToggleFavorite?beatId=${beatId}`, {
-                method: 'POST'
-            })
-            .then(response => {
-                // Если юзер не авторизован, сервер вернет 401 Unauthorized
-                if (response.status === 401 || response.status === 404) {
-                    showToast('Внимание', 'Пожалуйста, войдите в аккаунт, чтобы сохранять биты', '🔒');
-                    return null;
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data && data.success) {
-                    if (data.isLiked) {
-                        btnElement.innerHTML = '❤️'; // Закрашенное сердце
-                        btnElement.classList.add('liked');
-                        showToast('Избранное', 'Бит добавлен в вашу коллекцию', '❤️');
-                    } else {
-                        btnElement.innerHTML = '🤍'; // Пустое сердце
-                        btnElement.classList.remove('liked');
-                        showToast('Избранное', 'Бит удален из коллекции', '🤍');
+                    if (card) {
+                        let tagsContainer = card.querySelector('.tags-container');
+                        if (tagsContainer) tagsHtml = tagsContainer.innerHTML;
+                        let priceBtn = card.querySelector('.price-btn');
+                        if (priceBtn && !priceBtn.classList.contains('sold')) priceText = priceBtn.innerText;
                     }
+
+                    window.playerQueue.push({
+                        id: btn.getAttribute('data-id'), src: btn.getAttribute('data-audio'),
+                        title: btn.getAttribute('data-title'), producer: btn.getAttribute('data-producer'),
+                        cover: btn.getAttribute('data-cover'), tags: tagsHtml, price: priceText, btn: btn
+                    });
+                });
+            };
+
+            window.formatTime = function(seconds) {
+                if (isNaN(seconds)) return "0:00";
+                const m = Math.floor(seconds / 60); const s = Math.floor(seconds % 60);
+                return `${m}:${s < 10 ? '0' : ''}${s}`;
+            };
+
+            window.playGlobalTrack = function(src, title, producer, cover) {
+                window.buildQueue();
+                const index = window.playerQueue.findIndex(t => t.src === src);
+                if (index !== -1) window.playTrack(index);
+            };
+
+            window.playTrack = function(index) {
+                if (index < 0 || index >= window.playerQueue.length) return;
+                const track = window.playerQueue[index];
+
+                if (window.currentIndex === index && window.audioPlayer.src.includes(track.src)) {
+                    if (window.audioPlayer.paused) window.audioPlayer.play(); else window.audioPlayer.pause();
+                    return;
                 }
-            })
-            .catch(err => console.error('Ошибка лайка:', err));
-        }
-    </script>
+
+                window.currentIndex = index;
+                window.audioPlayer.src = track.src;
+                window.currentPlayingId = track.id;
+                window.audioPlayer.play();
+
+                document.getElementById('gp-title').innerText = track.title;
+                document.getElementById('gp-producer').innerText = track.producer;
+                document.getElementById('gp-cover').src = track.cover;
+               
+                document.getElementById('gp-price').innerText = track.price;
+
+                document.getElementById('global-player').classList.add('show');
+                document.querySelectorAll('.play-btn').forEach(btn => btn.innerHTML = '▶');
+                if (track.btn) track.btn.innerHTML = '⏸';
+            };
+
+            window.nextTrack = function() { if (window.currentIndex + 1 < window.playerQueue.length) window.playTrack(window.currentIndex + 1); };
+            window.prevTrack = function() { if (window.currentIndex - 1 >= 0) window.playTrack(window.currentIndex - 1); };
+
+            window.openPlayerCart = function() {
+                if (typeof openModal === 'function' && window.currentPlayingId) openModal(window.currentPlayingId);
+                else window.showToast('Внимание', 'Этот трек уже куплен или не продается', '⚠️');
+            };
+
+            window.shareTrack = function() {
+                if (!window.audioPlayer.src) return;
+                const url = window.location.origin + "/Beats?searchString=" + encodeURIComponent(document.getElementById('gp-title').innerText);
+                navigator.clipboard.writeText(url).then(() => window.showToast('Скопировано', 'Ссылка на трек скопирована в буфер', '🔗'));
+            };
+
+            window.toggleRepeat = function() {
+                window.audioPlayer.loop = !window.audioPlayer.loop;
+                const repeatBtn = document.getElementById('gp-repeat-btn');
+                if (window.audioPlayer.loop) {
+                    repeatBtn.classList.add('active');
+                    window.showToast('Повтор', 'Включен повтор трека', '🔁');
+                } else {
+                    repeatBtn.classList.remove('active');
+                }
+            };
+
+            // 🔥 4. ЗАЩИТА ОТ ДУБЛИРОВАНИЯ СОБЫТИЙ (Выполняется строго 1 раз)
+            if (!window.playerEventsAttached) {
+                window.playerEventsAttached = true;
+
+                const volumeSlider = document.getElementById('gp-volume');
+                if (volumeSlider) {
+                    window.audioPlayer.volume = volumeSlider.value;
+                    volumeSlider.addEventListener('input', (e) => window.audioPlayer.volume = e.target.value);
+                }
+
+                document.getElementById('gp-play-btn').onclick = () => {
+                    if (window.audioPlayer.paused) window.audioPlayer.play(); else window.audioPlayer.pause();
+                };
+
+                document.getElementById('gp-close-btn').onclick = () => {
+                    window.audioPlayer.pause();
+                    document.getElementById('global-player').classList.remove('show');
+                    document.querySelectorAll('.play-btn').forEach(btn => btn.innerHTML = '▶');
+                };
+
+                window.audioPlayer.addEventListener('play', () => {
+                    document.getElementById('gp-play-btn').innerHTML = window.svgPause;
+                    if (window.currentIndex !== -1 && window.playerQueue[window.currentIndex]) {
+                        if (window.playerQueue[window.currentIndex].btn) window.playerQueue[window.currentIndex].btn.innerHTML = '⏸';
+                    }
+                });
+
+                window.audioPlayer.addEventListener('pause', () => {
+                    document.getElementById('gp-play-btn').innerHTML = window.svgPlay;
+                    if (window.currentIndex !== -1 && window.playerQueue[window.currentIndex]) {
+                        if (window.playerQueue[window.currentIndex].btn) window.playerQueue[window.currentIndex].btn.innerHTML = '▶';
+                    }
+                });
+
+                window.audioPlayer.addEventListener('ended', window.nextTrack);
+
+                window.audioPlayer.addEventListener('timeupdate', () => {
+                    document.getElementById('gp-current-time').innerText = window.formatTime(window.audioPlayer.currentTime);
+                    if (window.audioPlayer.duration) {
+                        const percent = (window.audioPlayer.currentTime / window.audioPlayer.duration) * 100;
+                        document.getElementById('gp-progress').value = percent;
+                        document.getElementById('gp-progress-fill').style.width = percent + '%';
+                    }
+                });
+
+                window.audioPlayer.addEventListener('loadedmetadata', () => {
+                    document.getElementById('gp-duration').innerText = window.formatTime(window.audioPlayer.duration);
+                });
+
+                document.getElementById('gp-progress').addEventListener('input', (e) => {
+                    window.audioPlayer.currentTime = (e.target.value / 100) * window.audioPlayer.duration;
+                });
+            }
+
+            // 🔥 5. ЛОГИКА ЛАЙКОВ
+            window.toggleFavorite = function(beatId, btnElement) {
+                fetch(`/Profile/ToggleFavorite?beatId=${beatId}`, { method: 'POST' })
+                .then(response => {
+                    if (response.status === 401 || response.status === 404) {
+                        window.showToast('Внимание', 'Пожалуйста, войдите в аккаунт, чтобы сохранять биты', '🔒');
+                        return null;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.success) {
+                        if (data.isLiked) {
+                            btnElement.innerHTML = '❤️';
+                            btnElement.classList.add('liked');
+                            window.showToast('Избранное', 'Бит добавлен в вашу коллекцию', '❤️');
+                        } else {
+                            btnElement.innerHTML = '🤍';
+                            btnElement.classList.remove('liked');
+                            window.showToast('Избранное', 'Бит удален из коллекции', '🤍');
+                        }
+                    }
+                })
+                .catch(err => console.error('Ошибка лайка:', err));
+            }
+        </script>
+    </div>
 
     @await RenderSectionAsync("Scripts", required: false)
 

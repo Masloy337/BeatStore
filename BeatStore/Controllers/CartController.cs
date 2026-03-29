@@ -151,6 +151,8 @@ namespace BeatStore.Controllers
                     UserId = userId,
                     BeatId = beat.Id,
                     LicenseId = license.Id,
+                    // 🔥 ТЕПЕРЬ ОШИБКИ НЕ БУДЕТ, СОХРАНЯЕМ ЦЕНУ:
+                    Price = license.Price,
                     CreatedAt = DateTime.Now
                 };
 

@@ -155,6 +155,9 @@ namespace BeatStore.Migrations
                     b.Property<int?>("LicenseId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<decimal>("Price")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("TEXT");
