@@ -467,7 +467,9 @@
                         </button>
                     </div>
                 </div>
-                <div class="track-title">@beat.Title</div>
+                <a href="/Beats/Details/@beat.Id" class="track-title" style="text-decoration: none; display: block;">
+                    @beat.Title
+                </a>
                 <div class="track-producer mb-2">@producer</div>
                 <div class="mt-auto d-flex justify-content-between align-items-center">
 
@@ -529,7 +531,9 @@ else
                 </div>
 
                 <div class="info-wrapper">
-                    <div class="track-title" title="@beat.Title">@beat.Title</div>
+                    <a href="/Beats/Details/@beat.Id" class="track-title" style="text-decoration: none; display: block;" title="@beat.Title">
+                        @beat.Title
+                    </a>
                     <div class="track-producer">@producer</div>
 
                     @if (!string.IsNullOrEmpty(beat.Genre))

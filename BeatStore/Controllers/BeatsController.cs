@@ -150,5 +150,16 @@ namespace BeatStore.Controllers
 
             return Json(licenses);
         }
+        // GET: /Beats/Details/5
+        public async Task<IActionResult> Details(int id)
+        {
+            var beat = await _context.Beats
+                .Include(b => b.Licenses)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (beat == null) return NotFound();
+
+            return View(beat);
+        }
     }
 }
