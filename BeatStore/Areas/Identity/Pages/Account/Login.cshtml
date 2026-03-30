@@ -1,126 +1,151 @@
 ﻿@page
 @model BeatStore.Areas.Identity.Pages.Account.LoginModel
 @{
+    Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Вход";
 }
 
 <style>
-    .auth-container {
-        min-height: 75vh;
+    /* Выравниваем карточку по центру экрана */
+    .auth-wrapper {
         display: flex;
-        align-items: center;
         justify-content: center;
+        align-items: center;
+        min-height: 75vh;
     }
 
     .auth-card {
-        background: #141414;
-        border: 1px solid #222;
-        border-radius: 20px;
+        background-color: #141414;
         padding: 40px;
+        border-radius: 16px;
         width: 100%;
-        max-width: 450px;
+        max-width: 420px;
+        border: 1px solid #222;
         box-shadow: 0 20px 50px rgba(0,0,0,0.5);
     }
 
-    /* Стилизация полей ввода */
-    .auth-input {
-        background: #0a0a0a !important;
-        border: 1px solid #333 !important;
-        color: #fff !important;
-        border-radius: 12px;
-        transition: all 0.3s ease;
-    }
-
-        .auth-input:focus {
-            border-color: #1db954 !important;
-            box-shadow: 0 0 0 0.25rem rgba(29, 185, 84, 0.15) !important;
+        .auth-card h2 {
+            color: #fff;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 5px;
         }
 
-    /* Исправление Bootstrap Floating Labels для темной темы */
-    .form-floating > label {
-        color: #888;
+        .auth-card p.subtitle {
+            color: #aaa;
+            text-align: center;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+
+    .auth-input-group {
+        margin-bottom: 18px;
+        width: 100%;
+        display: block; /* Сбрасываем случайные стили */
     }
 
-    .form-floating > .form-control:focus ~ label,
-    .form-floating > .form-control:not(:placeholder-shown) ~ label {
-        color: #1db954;
-        transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
-        background: transparent;
-    }
+        .auth-input-group label {
+            display: block;
+            color: #888;
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: 600;
+        }
 
-    .form-floating > .form-control:-webkit-autofill ~ label {
-        background: transparent !important;
-    }
+        .auth-input-group input.form-control {
+            width: 100%;
+            background-color: #0a0a0a !important;
+            border: 1px solid #333 !important;
+            color: #fff !important;
+            padding: 14px 15px;
+            border-radius: 10px;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
 
-    .auth-btn {
-        background: #1db954;
+            .auth-input-group input.form-control:focus {
+                border-color: #1db954 !important;
+                outline: none;
+                box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.15) !important;
+            }
+
+    .btn-auth {
+        background-color: #1db954;
         color: #000;
         font-weight: 800;
-        border-radius: 30px;
-        padding: 14px;
         width: 100%;
+        padding: 14px;
+        border-radius: 30px;
         border: none;
+        margin-top: 10px;
         transition: transform 0.2s;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-top: 15px;
     }
 
-        .auth-btn:hover {
-            background: #1ed760;
+        .btn-auth:hover {
+            background-color: #1ed760;
             transform: scale(1.03);
         }
 
-    .auth-link {
-        color: #1db954;
-        text-decoration: none;
-        transition: color 0.2s;
+    .auth-links {
+        text-align: center;
+        margin-top: 25px;
+        font-size: 14px;
     }
 
-        .auth-link:hover {
-            color: #1ed760;
-            text-decoration: underline;
+        .auth-links a {
+            color: #1db954;
+            text-decoration: none;
+            font-weight: 600;
         }
+
+            .auth-links a:hover {
+                text-decoration: underline;
+            }
+
+    .checkbox-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #aaa;
+        font-size: 13px;
+        margin-bottom: 20px;
+    }
 </style>
 
-<div class="auth-container">
-    <div class="auth-card shadow-lg">
-
-        <div class="text-center mb-4">
-            <h2 class="fw-bold text-white mb-2">С возвращением! 🎧</h2>
-            <p class="text-secondary small">Войди, чтобы скачивать свои биты</p>
-        </div>
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <h2>С возвращением! 🎧</h2>
+        <p class="subtitle">Войди, чтобы скачивать свои биты</p>
 
         <form id="account" method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3 small" role="alert"></div>
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
 
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Email" class="form-control auth-input" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+            <div class="auth-input-group">
                 <label asp-for="Input.Email">Email адрес</label>
-                <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                <span asp-validation-for="Input.Email" class="text-danger" style="font-size: 12px;"></span>
             </div>
 
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Password" class="form-control auth-input" autocomplete="current-password" aria-required="true" placeholder="password" />
+            <div class="auth-input-group">
                 <label asp-for="Input.Password">Пароль</label>
-                <span asp-validation-for="Input.Password" class="text-danger small"></span>
+                <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="••••••••" />
+                <span asp-validation-for="Input.Password" class="text-danger" style="font-size: 12px;"></span>
             </div>
 
-            <div class="checkbox mb-4 text-secondary small d-flex align-items-center gap-2">
-                <input class="form-check-input m-0" asp-for="Input.RememberMe" style="accent-color: #1db954; background-color: #0a0a0a; border-color: #333;" />
-                <label asp-for="Input.RememberMe" class="form-label m-0" style="cursor: pointer;">
+            <div class="checkbox-container">
+                <input class="form-check-input" asp-for="Input.RememberMe" style="margin:0; cursor:pointer;" />
+                <label asp-for="Input.RememberMe" style="margin:0; cursor:pointer;">
                     Запомнить меня
                 </label>
             </div>
 
-            <button id="login-submit" type="submit" class="auth-btn shadow">Войти в аккаунт</button>
+            <button id="login-submit" type="submit" class="btn-auth shadow-sm">ВОЙТИ В АККАУНТ</button>
 
-            <div class="text-center mt-4">
-                <p class="text-secondary mb-1 small">Еще нет аккаунта?</p>
-                <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="auth-link fw-bold">Создать аккаунт</a>
+            <div class="auth-links">
+                <span style="color:#888;">Еще нет аккаунта?</span><br />
+                <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Создать аккаунт</a>
             </div>
         </form>
-
     </div>
 </div>
 
